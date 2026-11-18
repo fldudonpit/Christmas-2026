@@ -1,0 +1,6 @@
+{
+  "name": "Udonpittayanukoon Christmas Grand Prix 2026",
+  "description": "ระบบลงทะเบียนและตารางการแข่งขันงานคริสต์มาส ธีม Formula 1 ประจำปี 2569 กลุ่มสาระการเรียนรู้ภาษาต่างประเทศ และโครงการห้องเรียนนานาชาติ โรงเรียนอุดรพิทยานุกูล",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

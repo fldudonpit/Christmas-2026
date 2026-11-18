@@ -1,0 +1,116 @@
+@import "tailwindcss";
+
+@theme {
+  --font-display: "Barlow Condensed", "IBM Plex Sans Thai", sans-serif;
+  --font-sans: "IBM Plex Sans Thai", system-ui, -apple-system, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, SFMono-Regular, monospace;
+}
+
+@layer base {
+  html {
+    scroll-behavior: smooth;
+    font-family: var(--font-sans);
+    background-color: #07080a;
+    color: #f5f5f4;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    html {
+      scroll-behavior: auto;
+    }
+  }
+}
+
+.tabular-nums {
+  font-variant-numeric: tabular-nums;
+}
+
+.asphalt-surface {
+  background-color: #090b0d;
+  background-image:
+    radial-gradient(circle at 75% 22%, rgba(225, 6, 0, 0.16), transparent 50%),
+    radial-gradient(circle at 18% 78%, rgba(20, 83, 45, 0.22), transparent 48%),
+    radial-gradient(circle at 50% 10%, rgba(212, 175, 55, 0.08), transparent 40%),
+    linear-gradient(to bottom, rgba(255, 255, 255, 0.02) 1px, transparent 1px),
+    linear-gradient(to right, rgba(255, 255, 255, 0.02) 1px, transparent 1px);
+  background-size: 100% 100%, 100% 100%, 100% 100%, 48px 48px, 48px 48px;
+}
+
+.crimson-stage {
+  background: radial-gradient(circle at 68% 42%, #ef1208 0%, #c80800 52%, #7d0400 100%);
+}
+
+.evergreen-stage {
+  background: radial-gradient(circle at 22% 20%, #113a27 0%, #091d14 58%, #070e0b 100%);
+}
+
+.pitlane-stripe {
+  background: linear-gradient(
+    180deg,
+    rgba(225, 6, 0, 0.94) 0%,
+    rgba(195, 6, 0, 0.88) 55%,
+    rgba(130, 4, 0, 0.58) 100%
+  );
+}
+
+.festive-ribbon {
+  background: linear-gradient(
+    90deg,
+    #e10600 0%,
+    #e10600 34%,
+    #d4af37 34%,
+    #d4af37 66%,
+    #15803d 66%,
+    #15803d 100%
+  );
+}
+
+.checkered-border {
+  background-image:
+    linear-gradient(45deg, rgba(255, 255, 255, 0.16) 25%, transparent 25%),
+    linear-gradient(-45deg, rgba(255, 255, 255, 0.16) 25%, transparent 25%),
+    linear-gradient(45deg, transparent 75%, rgba(255, 255, 255, 0.16) 75%),
+    linear-gradient(-45deg, transparent 75%, rgba(255, 255, 255, 0.16) 75%);
+  background-size: 10px 10px;
+  background-position: 0 0, 0 5px, 5px -5px, -5px 0;
+}
+
+@keyframes snowDrift {
+  0% {
+    transform: translate3d(0, -12px, 0);
+    opacity: 0;
+  }
+  15% {
+    opacity: 0.75;
+  }
+  85% {
+    opacity: 0.65;
+  }
+  100% {
+    transform: translate3d(14px, 460px, 0);
+    opacity: 0;
+  }
+}
+
+.snowflake {
+  animation-name: snowDrift;
+  animation-timing-function: linear;
+  animation-iteration-count: infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .snowflake {
+    animation: none;
+    opacity: 0.35;
+  }
+}
+
+@media print {
+  body {
+    background: #ffffff !important;
+    color: #111827 !important;
+  }
+  .no-print {
+    display: none !important;
+  }
+}

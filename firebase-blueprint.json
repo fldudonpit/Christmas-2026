@@ -1,0 +1,248 @@
+{
+  "entities": {
+    "Registration": {
+      "title": "Registration",
+      "description": "Full private competition registration record including student contact PII, readable only by the registrant and admins.",
+      "type": "object",
+      "properties": {
+        "ownerUid": {
+          "type": "string",
+          "description": "Firebase Auth UID of the registering student",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "raceNumber": {
+          "type": "string",
+          "description": "Competitor Race Pass identifier",
+          "minLength": 4,
+          "maxLength": 24,
+          "pattern": "^#UP-[A-Z0-9\\-]+$"
+        },
+        "competitionId": {
+          "type": "string",
+          "description": "Competition identifier",
+          "enum": [
+            "singing-contest",
+            "christmas-card",
+            "speech",
+            "drawing-painting",
+            "english-quiz",
+            "cover-dance"
+          ]
+        },
+        "division": {
+          "type": "string",
+          "description": "Competition level division",
+          "enum": ["junior", "senior", "open"]
+        },
+        "studentName": {
+          "type": "string",
+          "description": "Thai full name of primary registrant",
+          "minLength": 2,
+          "maxLength": 150
+        },
+        "englishFullName": {
+          "type": "string",
+          "description": "Optional English full name (required for Drawing & Painting)",
+          "maxLength": 150
+        },
+        "studentId": {
+          "type": "string",
+          "description": "School student ID (4-8 digits)",
+          "minLength": 4,
+          "maxLength": 8,
+          "pattern": "^[0-9]{4,8}$"
+        },
+        "gradeLevel": {
+          "type": "string",
+          "description": "Grade level",
+          "enum": ["ม.1", "ม.2", "ม.3", "ม.4", "ม.5", "ม.6"]
+        },
+        "classroom": {
+          "type": "string",
+          "description": "Classroom identifier",
+          "minLength": 1,
+          "maxLength": 20
+        },
+        "contactInfo": {
+          "type": "string",
+          "description": "Phone number for coordinator contact (PII)",
+          "minLength": 5,
+          "maxLength": 60
+        },
+        "teamName": {
+          "type": "string",
+          "description": "Cover Dance team name",
+          "maxLength": 100
+        },
+        "teamMembersList": {
+          "type": "array",
+          "description": "Structured list of up to 10 Cover Dance team members"
+        },
+        "teamMembers": {
+          "type": "string",
+          "description": "Formatted string of team members for display and CSV export",
+          "maxLength": 2000
+        },
+        "submissionTitle": {
+          "type": "string",
+          "description": "Song title, artwork title, or speech topic",
+          "maxLength": 200
+        },
+        "submissionUrl": {
+          "type": "string",
+          "description": "Optional YouTube or Google Drive URL",
+          "maxLength": 500
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp when created"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp when updated"
+        }
+      },
+      "required": [
+        "ownerUid",
+        "raceNumber",
+        "competitionId",
+        "division",
+        "studentName",
+        "studentId",
+        "gradeLevel",
+        "classroom",
+        "contactInfo",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "PublicEntry": {
+      "title": "PublicEntry",
+      "description": "Public non-PII summary record for the Starting Grid and live competition counts.",
+      "type": "object",
+      "properties": {
+        "ownerUid": {
+          "type": "string",
+          "description": "Firebase Auth UID of the registrant",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "raceNumber": {
+          "type": "string",
+          "description": "Competitor Race Pass identifier",
+          "minLength": 4,
+          "maxLength": 24,
+          "pattern": "^#UP-[A-Z0-9\\-]+$"
+        },
+        "competitionId": {
+          "type": "string",
+          "description": "Competition identifier",
+          "enum": [
+            "singing-contest",
+            "christmas-card",
+            "speech",
+            "drawing-painting",
+            "english-quiz",
+            "cover-dance"
+          ]
+        },
+        "division": {
+          "type": "string",
+          "description": "Competition level division",
+          "enum": ["junior", "senior", "open"]
+        },
+        "displayName": {
+          "type": "string",
+          "description": "Public display name or team name",
+          "minLength": 2,
+          "maxLength": 150
+        },
+        "gradeLevel": {
+          "type": "string",
+          "description": "Grade level",
+          "enum": ["ม.1", "ม.2", "ม.3", "ม.4", "ม.5", "ม.6"]
+        },
+        "classroom": {
+          "type": "string",
+          "description": "Classroom identifier",
+          "minLength": 1,
+          "maxLength": 20
+        },
+        "teamName": {
+          "type": "string",
+          "description": "Team name if Cover Dance",
+          "maxLength": 100
+        },
+        "teamMemberCount": {
+          "type": "number",
+          "description": "Count of team members (1-10)"
+        },
+        "isPublic": {
+          "type": "boolean",
+          "description": "Must be true for public starting grid visibility"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp when created"
+        }
+      },
+      "required": [
+        "ownerUid",
+        "raceNumber",
+        "competitionId",
+        "division",
+        "displayName",
+        "gradeLevel",
+        "classroom",
+        "isPublic",
+        "createdAt"
+      ]
+    },
+    "AdminUser": {
+      "title": "AdminUser",
+      "description": "Authorized committee administrator UID record.",
+      "type": "object",
+      "properties": {
+        "email": {
+          "type": "string",
+          "format": "email",
+          "description": "Admin email address",
+          "maxLength": 150
+        },
+        "addedByUid": {
+          "type": "string",
+          "description": "UID of the admin who granted access",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp"
+        }
+      },
+      "required": ["email", "addedByUid", "createdAt"]
+    }
+  },
+  "firestore": {
+    "/registrations/{registrationId}": {
+      "schema": { "$ref": "#/entities/Registration" },
+      "description": "Private full registration documents containing student phone PII; accessible only by owner or admin."
+    },
+    "/public_entries/{entryId}": {
+      "schema": { "$ref": "#/entities/PublicEntry" },
+      "description": "Public non-PII starting grid entries atomically paired with registrations."
+    },
+    "/admins/{adminUid}": {
+      "schema": { "$ref": "#/entities/AdminUser" },
+      "description": "Additional committee admin accounts managed by the bootstrapped department admin."
+    }
+  }
+}
