@@ -52,7 +52,7 @@ export interface Competition {
   totalPoints?: number;
   judgingNote?: string;
   contacts: CompetitionContact[];
-  dateGroup: 'dec8_submit' | 'dec8_live' | 'dec18_live';
+  dateGroup: 'dec8_submit' | 'dec8_live' | 'dec15_live' | 'dec18_live';
 }
 
 export interface TeamMember {
@@ -62,7 +62,6 @@ export interface TeamMember {
 
 export interface RegistrationEntry {
   id: string;
-  ownerUid: string;
   raceNumber: string;
   competitionId: CompetitionId;
   division: DivisionType;
@@ -77,20 +76,5 @@ export interface RegistrationEntry {
   teamMembers?: string;
   submissionTitle?: string;
   submissionUrl?: string;
-  createdAt: string;
-}
-
-export interface PublicEntry {
-  id: string;
-  ownerUid: string;
-  raceNumber: string;
-  competitionId: CompetitionId;
-  division: DivisionType;
-  displayName: string;
-  gradeLevel: string;
-  classroom: string;
-  teamName?: string;
-  teamMemberCount?: number;
-  isPublic: boolean;
   createdAt: string;
 }

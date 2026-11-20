@@ -3,12 +3,11 @@ import { onAuthStateChanged, type User } from 'firebase/auth';
 import {
   Timestamp,
   collection,
+  deleteDoc,
   doc,
   onSnapshot,
-  query,
   serverTimestamp,
-  where,
-  writeBatch,
+  setDoc,
 } from 'firebase/firestore';
 import { CompetitionsSection } from './components/CompetitionsSection';
 import { Footer } from './components/Footer';
@@ -26,11 +25,7 @@ import {
   signInWithGoogle,
   signOutUser,
 } from './firebase';
-import {
-  CompetitionId,
-  PublicEntry,
-  RegistrationEntry,
-} from './types/competition';
+import { CompetitionId, RegistrationEntry } from './types/competition';
 
 function timestampToIso(value: unknown): string {
   if (value instanceof Timestamp) {
@@ -42,10 +37,10 @@ function timestampToIso(value: unknown): string {
   return new Date().toISOString();
 }
 
-function generateRaceNumber(currentCount: number): string {
-  const num = String(currentCount + 1).padStart(3, '0');
+function generateRaceNumber(): string {
+  const digits = String(Math.floor(1000 + Math.random() * 9000));
   const suffix = Math.random().toString(36).slice(2, 5).toUpperCase();
-  return `#UP-${num}-${suffix}`;
+  return `#UP-${digits}-${suffix}`;
 }
 
 export default function App() {
@@ -53,8 +48,7 @@ export default function App() {
     useState<CompetitionId>('singing-contest');
   const [user, setUser] = useState<User | null>(null);
   const [authReady, setAuthReady] = useState(false);
-
-  const [publicEntries, setPublicEntries] = useState<PublicEntry[]>([]);
+  const [showAdminModal, setShowAdminModal] = useState(false);
   const [privateRegistrations, setPrivateRegistrations] = useState<RegistrationEntry[]>([]);
 
   const isAdmin = Boolean(user?.emailVerified && user.email === ADMIN_EMAIL);
@@ -67,63 +61,20 @@ export default function App() {
     return () => unsubscribe();
   }, []);
 
-  // Real-time listener for public non-PII Starting Grid entries
+  // Real-time listener for registrations (strictly Admin-only)
   useEffect(() => {
-    if (!authReady) return;
-    const publicQuery = query(
-      collection(db, 'public_entries'),
-      where('isPublic', '==', true)
-    );
-    const unsubscribe = onSnapshot(
-      publicQuery,
-      (snapshot) => {
-        const items: PublicEntry[] = snapshot.docs.map((docSnap) => {
-          const data = docSnap.data();
-          return {
-            id: docSnap.id,
-            ownerUid: String(data.ownerUid ?? ''),
-            raceNumber: String(data.raceNumber ?? ''),
-            competitionId: data.competitionId as CompetitionId,
-            division: data.division,
-            displayName: String(data.displayName ?? ''),
-            gradeLevel: String(data.gradeLevel ?? ''),
-            classroom: String(data.classroom ?? ''),
-            teamName: typeof data.teamName === 'string' ? data.teamName : undefined,
-            teamMemberCount:
-              typeof data.teamMemberCount === 'number' ? data.teamMemberCount : undefined,
-            isPublic: Boolean(data.isPublic),
-            createdAt: timestampToIso(data.createdAt),
-          };
-        });
-        items.sort((a, b) => b.createdAt.localeCompare(a.createdAt));
-        setPublicEntries(items);
-      },
-      (error) => {
-        handleFirestoreError(error, OperationType.LIST, 'public_entries');
-      }
-    );
-    return () => unsubscribe();
-  }, [authReady]);
-
-  // Real-time listener for private registrations (all for admin, own entries for signed-in student)
-  useEffect(() => {
-    if (!authReady || !user) {
+    if (!authReady || !isAdmin) {
       setPrivateRegistrations([]);
       return;
     }
 
-    const regQuery = isAdmin
-      ? collection(db, 'registrations')
-      : query(collection(db, 'registrations'), where('ownerUid', '==', user.uid));
-
     const unsubscribe = onSnapshot(
-      regQuery,
+      collection(db, 'registrations'),
       (snapshot) => {
         const items: RegistrationEntry[] = snapshot.docs.map((docSnap) => {
           const data = docSnap.data();
           return {
             id: docSnap.id,
-            ownerUid: String(data.ownerUid ?? ''),
             raceNumber: String(data.raceNumber ?? ''),
             competitionId: data.competitionId as CompetitionId,
             division: data.division,
@@ -155,7 +106,7 @@ export default function App() {
     );
 
     return () => unsubscribe();
-  }, [authReady, user, isAdmin]);
+  }, [authReady, isAdmin]);
 
   const scrollToRegister = () => {
     const el = document.getElementById('register');
@@ -177,20 +128,24 @@ export default function App() {
     await signOutUser();
   };
 
-  const handleAddRegistration = async (
-    payload: Omit<RegistrationEntry, 'id' | 'ownerUid' | 'raceNumber' | 'createdAt'>
-  ): Promise<RegistrationEntry> => {
-    if (!auth.currentUser) {
-      throw new Error('User must be signed in with Google to register.');
+  const handleOpenAdmin = () => {
+    if (isAdmin) {
+      const el = document.getElementById('admin-panel');
+      if (el) {
+        el.scrollIntoView({ behavior: 'smooth' });
+      }
+    } else {
+      setShowAdminModal(true);
     }
+  };
 
-    const ownerUid = auth.currentUser.uid;
+  const handleAddRegistration = async (
+    payload: Omit<RegistrationEntry, 'id' | 'raceNumber' | 'createdAt'>
+  ): Promise<RegistrationEntry> => {
     const regRef = doc(collection(db, 'registrations'));
-    const publicRef = doc(db, 'public_entries', regRef.id);
-    const raceNumber = generateRaceNumber(publicEntries.length);
+    const raceNumber = generateRaceNumber();
 
     const registrationPayload: Record<string, unknown> = {
-      ownerUid,
       raceNumber,
       competitionId: payload.competitionId,
       division: payload.division,
@@ -212,29 +167,8 @@ export default function App() {
     if (payload.submissionTitle) registrationPayload.submissionTitle = payload.submissionTitle;
     if (payload.submissionUrl) registrationPayload.submissionUrl = payload.submissionUrl;
 
-    const publicPayload: Record<string, unknown> = {
-      ownerUid,
-      raceNumber,
-      competitionId: payload.competitionId,
-      division: payload.division,
-      displayName: payload.studentName,
-      gradeLevel: payload.gradeLevel,
-      classroom: payload.classroom,
-      isPublic: true,
-      createdAt: serverTimestamp(),
-    };
-
-    if (payload.teamName) publicPayload.teamName = payload.teamName;
-    if (payload.teamMembersList && payload.teamMembersList.length > 0) {
-      publicPayload.teamMemberCount = payload.teamMembersList.length;
-    }
-
-    const batch = writeBatch(db);
-    batch.set(regRef, registrationPayload);
-    batch.set(publicRef, publicPayload);
-
     try {
-      await batch.commit();
+      await setDoc(regRef, registrationPayload);
     } catch (error) {
       handleFirestoreError(error, OperationType.WRITE, `registrations/${regRef.id}`);
     }
@@ -242,18 +176,14 @@ export default function App() {
     return {
       ...payload,
       id: regRef.id,
-      ownerUid,
       raceNumber,
       createdAt: new Date().toISOString(),
     };
   };
 
   const handleDeleteRegistration = async (id: string) => {
-    const batch = writeBatch(db);
-    batch.delete(doc(db, 'registrations', id));
-    batch.delete(doc(db, 'public_entries', id));
     try {
-      await batch.commit();
+      await deleteDoc(doc(db, 'registrations', id));
     } catch (error) {
       handleFirestoreError(error, OperationType.DELETE, `registrations/${id}`);
     }
@@ -268,11 +198,9 @@ export default function App() {
           selectedCompetitionId={selectedCompetitionId}
           onSelectCompetition={setSelectedCompetitionId}
           onRegisterClick={scrollToRegister}
-          totalRegistrations={publicEntries.length}
         />
 
         <CompetitionsSection
-          registrations={publicEntries}
           selectedCompetitionId={selectedCompetitionId}
           onSelectForRegister={handleSelectForRegister}
         />
@@ -280,10 +208,6 @@ export default function App() {
         <RaceCalendarSection onSelectForRegister={handleSelectForRegister} />
 
         <RegistrationSection
-          user={user}
-          authReady={authReady}
-          onGoogleSignIn={handleGoogleSignIn}
-          onSignOut={handleSignOut}
           selectedCompetitionId={selectedCompetitionId}
           onCompetitionChange={setSelectedCompetitionId}
           onAddRegistration={handleAddRegistration}
@@ -292,16 +216,16 @@ export default function App() {
         <RegisteredGridSection
           user={user}
           isAdmin={isAdmin}
-          publicEntries={publicEntries}
           privateRegistrations={privateRegistrations}
+          showAdminModal={showAdminModal}
+          onCloseAdminModal={() => setShowAdminModal(false)}
           onGoogleSignIn={handleGoogleSignIn}
           onSignOut={handleSignOut}
           onDeleteRegistration={handleDeleteRegistration}
-          onJumpToRegister={scrollToRegister}
         />
       </main>
 
-      <Footer />
+      <Footer isAdmin={isAdmin} onOpenAdmin={handleOpenAdmin} />
     </div>
   );
 }

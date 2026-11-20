@@ -1,6 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import type { User } from 'firebase/auth';
-import { ExternalLink, LogIn, LogOut, Plus, Trash2 } from 'lucide-react';
+import { ExternalLink, Plus, Trash2 } from 'lucide-react';
 import {
   ALL_GRADES,
   COMPETITIONS,
@@ -15,24 +14,16 @@ import {
 } from '../types/competition';
 
 interface RegistrationSectionProps {
-  user: User | null;
-  authReady: boolean;
-  onGoogleSignIn: (forceSelectAccount?: boolean) => Promise<void>;
-  onSignOut: () => Promise<void>;
   selectedCompetitionId: CompetitionId;
   onCompetitionChange: (id: CompetitionId) => void;
   onAddRegistration: (
-    entry: Omit<RegistrationEntry, 'id' | 'ownerUid' | 'raceNumber' | 'createdAt'>
+    entry: Omit<RegistrationEntry, 'id' | 'raceNumber' | 'createdAt'>
   ) => Promise<RegistrationEntry>;
 }
 
 const MAX_COVER_DANCE_MEMBERS = 10;
 
 export const RegistrationSection: React.FC<RegistrationSectionProps> = ({
-  user,
-  authReady,
-  onGoogleSignIn,
-  onSignOut,
   selectedCompetitionId,
   onCompetitionChange,
   onAddRegistration,
@@ -61,7 +52,6 @@ export const RegistrationSection: React.FC<RegistrationSectionProps> = ({
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [submitError, setSubmitError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isSigningIn, setIsSigningIn] = useState(false);
   const [createdPass, setCreatedPass] = useState<RegistrationEntry | null>(null);
 
   useEffect(() => {
@@ -125,18 +115,6 @@ export const RegistrationSection: React.FC<RegistrationSectionProps> = ({
       : selectedComp.themeTopic.junior;
   }, [selectedComp, division]);
 
-  const handleSignInClick = async () => {
-    setSubmitError('');
-    setIsSigningIn(true);
-    try {
-      await onGoogleSignIn(false);
-    } catch {
-      setSubmitError('ไม่สามารถเข้าสู่ระบบ Google ได้ กรุณาอนุญาตป๊อปอัปแล้วลองใหม่อีกครั้ง');
-    } finally {
-      setIsSigningIn(false);
-    }
-  };
-
   const validate = (): boolean => {
     const nextErrors: Record<string, string> = {};
 
@@ -188,10 +166,6 @@ export const RegistrationSection: React.FC<RegistrationSectionProps> = ({
     e.preventDefault();
     setSubmitError('');
 
-    if (!user) {
-      setSubmitError('กรุณาเข้าสู่ระบบด้วยบัญชี Google ก่อนกดยืนยันการสมัคร');
-      return;
-    }
     if (!validate()) return;
 
     const cleanedMembers =
@@ -275,7 +249,7 @@ export const RegistrationSection: React.FC<RegistrationSectionProps> = ({
           {/* Left Context & Selected Competition Telemetry */}
           <div className="space-y-6 lg:col-span-5">
             <div className="space-y-2">
-              <p className="text-sm font-medium text-[#D4AF37]">Driver Entry &amp; Race Pass</p>
+              <p className="text-sm font-medium text-[#D4AF37]">3. กรอกใบสมัครออนไลน์</p>
               <h2 className="font-display text-4xl font-bold tracking-tight text-white [text-wrap:balance]">
                 ลงทะเบียนเข้าร่วมการแข่งขัน
               </h2>
@@ -473,49 +447,6 @@ export const RegistrationSection: React.FC<RegistrationSectionProps> = ({
               noValidate
               className="rounded-xl border border-white/10 bg-[#12151A] p-6 sm:p-8 space-y-6"
             >
-              {/* Google Sign-In Status Bar */}
-              <div className="flex flex-col justify-between gap-3 rounded-lg border border-white/10 bg-[#0B0D0F] p-4 sm:flex-row sm:items-center">
-                {!authReady ? (
-                  <p className="text-xs text-neutral-400">กำลังตรวจสอบสถานะบัญชี...</p>
-                ) : user ? (
-                  <>
-                    <div className="space-y-0.5">
-                      <p className="text-xs font-semibold text-emerald-400">
-                        ยืนยันตัวตนด้วยบัญชี Google แล้ว
-                      </p>
-                      <p className="font-mono text-xs text-neutral-300">{user.email}</p>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => onSignOut()}
-                      className="inline-flex items-center gap-1.5 whitespace-nowrap shrink-0 rounded-md border border-white/15 px-3 py-1.5 text-xs font-medium text-neutral-300 transition-colors hover:text-white cursor-pointer"
-                    >
-                      <LogOut className="h-3.5 w-3.5" />
-                      เปลี่ยนบัญชี / ออกจากระบบ
-                    </button>
-                  </>
-                ) : (
-                  <>
-                    <div className="space-y-0.5">
-                      <p className="text-xs font-semibold text-white">
-                        เข้าสู่ระบบด้วย Google ก่อนลงทะเบียน
-                      </p>
-                      <p className="text-xs text-neutral-400">
-                        เพื่อบันทึกข้อมูลถาวรบนคลาวด์ และป้องกันการแอบอ้างสมัครแทนผู้อื่น
-                      </p>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={handleSignInClick}
-                      disabled={isSigningIn}
-                      className="inline-flex items-center gap-1.5 whitespace-nowrap shrink-0 rounded-md bg-white px-4 py-2 text-xs font-semibold text-neutral-900 transition-colors hover:bg-neutral-200 disabled:opacity-50 cursor-pointer"
-                    >
-                      <LogIn className="h-3.5 w-3.5" />
-                      {isSigningIn ? 'กำลังเข้าสู่ระบบ...' : 'เข้าสู่ระบบด้วย Google'}
-                    </button>
-                  </>
-                )}
-              </div>
 
               {/* Step 1: Competition Selector */}
               <div className="space-y-2">
@@ -879,25 +810,13 @@ export const RegistrationSection: React.FC<RegistrationSectionProps> = ({
                 <p className="text-xs text-neutral-400">
                   Foreign Language Department &amp; International Program
                 </p>
-                {user ? (
-                  <button
-                    type="submit"
-                    disabled={isSubmitting}
-                    className="whitespace-nowrap shrink-0 rounded-md bg-[#E10600] px-6 py-3 text-sm font-semibold text-white transition-colors duration-150 hover:bg-[#B80500] disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white cursor-pointer"
-                  >
-                    {isSubmitting ? 'กำลังบันทึกข้อมูล...' : 'ยืนยันการสมัครแข่งขัน'}
-                  </button>
-                ) : (
-                  <button
-                    type="button"
-                    onClick={handleSignInClick}
-                    disabled={isSigningIn}
-                    className="inline-flex items-center justify-center gap-2 whitespace-nowrap shrink-0 rounded-md bg-[#E10600] px-6 py-3 text-sm font-semibold text-white transition-colors duration-150 hover:bg-[#B80500] disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white cursor-pointer"
-                  >
-                    <LogIn className="h-4 w-4" />
-                    {isSigningIn ? 'กำลังเข้าสู่ระบบ...' : 'เข้าสู่ระบบด้วย Google เพื่อสมัคร'}
-                  </button>
-                )}
+                <button
+                  type="submit"
+                  disabled={isSubmitting}
+                  className="whitespace-nowrap shrink-0 rounded-md bg-[#E10600] px-6 py-3 text-sm font-semibold text-white transition-colors duration-150 hover:bg-[#B80500] disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white cursor-pointer"
+                >
+                  {isSubmitting ? 'กำลังบันทึกข้อมูล...' : 'ยืนยันการสมัครแข่งขัน'}
+                </button>
               </div>
             </form>
           </div>

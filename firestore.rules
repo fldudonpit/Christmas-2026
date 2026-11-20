@@ -71,7 +71,6 @@ service cloud.firestore {
 
     function isValidRegistration(data) {
       return data.keys().hasAll([
-          'ownerUid',
           'raceNumber',
           'competitionId',
           'division',
@@ -84,7 +83,6 @@ service cloud.firestore {
           'updatedAt'
         ])
         && data.keys().hasOnly([
-          'ownerUid',
           'raceNumber',
           'competitionId',
           'division',
@@ -102,7 +100,6 @@ service cloud.firestore {
           'createdAt',
           'updatedAt'
         ])
-        && isValidId(data.ownerUid)
         && data.raceNumber is string && data.raceNumber.size() >= 4 && data.raceNumber.size() <= 24 && data.raceNumber.matches('^#UP-[A-Z0-9\\-]+$')
         && isValidCompetitionId(data.competitionId)
         && isValidDivisionForCompetition(data.competitionId, data.division)
@@ -121,44 +118,6 @@ service cloud.firestore {
         && data.updatedAt is timestamp;
     }
 
-    function isValidPublicEntry(data) {
-      return data.keys().hasAll([
-          'ownerUid',
-          'raceNumber',
-          'competitionId',
-          'division',
-          'displayName',
-          'gradeLevel',
-          'classroom',
-          'isPublic',
-          'createdAt'
-        ])
-        && data.keys().hasOnly([
-          'ownerUid',
-          'raceNumber',
-          'competitionId',
-          'division',
-          'displayName',
-          'gradeLevel',
-          'classroom',
-          'teamName',
-          'teamMemberCount',
-          'isPublic',
-          'createdAt'
-        ])
-        && isValidId(data.ownerUid)
-        && data.raceNumber is string && data.raceNumber.size() >= 4 && data.raceNumber.size() <= 24 && data.raceNumber.matches('^#UP-[A-Z0-9\\-]+$')
-        && isValidCompetitionId(data.competitionId)
-        && isValidDivisionForCompetition(data.competitionId, data.division)
-        && data.displayName is string && data.displayName.size() >= 2 && data.displayName.size() <= 150
-        && isValidGrade(data.gradeLevel)
-        && data.classroom is string && data.classroom.size() >= 1 && data.classroom.size() <= 20
-        && (!('teamName' in data) || (data.teamName is string && data.teamName.size() <= 100))
-        && (!('teamMemberCount' in data) || (data.teamMemberCount is int && data.teamMemberCount >= 1 && data.teamMemberCount <= 10))
-        && data.isPublic == true
-        && data.createdAt is timestamp;
-    }
-
     function isValidAdminUser(data) {
       return data.keys().hasAll(['email', 'addedByUid', 'createdAt'])
         && data.keys().hasOnly(['email', 'addedByUid', 'createdAt'])
@@ -167,56 +126,28 @@ service cloud.firestore {
         && data.createdAt is timestamp;
     }
 
-    // Private full registrations (PII isolated to owner or admin; zero DB reads in allow list)
+    // Registrations: guests may submit new registrations; reads/updates/deletes strictly Admin-only
     match /registrations/{registrationId} {
-      allow get: if isValidId(registrationId) && isVerifiedUser() && (
-        existing().ownerUid == request.auth.uid || isAdmin()
-      );
-      allow list: if isVerifiedUser() && (
-        isBootstrappedAdmin() || resource.data.ownerUid == request.auth.uid
-      );
-      allow create: if isVerifiedUser()
-        && isValidId(registrationId)
+      allow get: if isValidId(registrationId) && isAdmin();
+      allow list: if isBootstrappedAdmin();
+      allow create: if isValidId(registrationId)
         && isValidRegistration(incoming())
-        && incoming().ownerUid == request.auth.uid
         && incoming().createdAt == request.time
-        && incoming().updatedAt == request.time
-        && existsAfter(/databases/$(database)/documents/public_entries/$(registrationId));
-      allow update: if isVerifiedUser()
+        && incoming().updatedAt == request.time;
+      allow update: if isAdmin()
         && isValidId(registrationId)
         && isValidRegistration(incoming())
-        && (
-          isAdmin() ||
-          (existing().ownerUid == request.auth.uid &&
-           incoming().ownerUid == existing().ownerUid &&
-           incoming().createdAt == existing().createdAt &&
-           incoming().updatedAt == request.time &&
-           incoming().diff(existing()).affectedKeys().hasOnly([
-             'submissionTitle',
-             'submissionUrl',
-             'updatedAt'
-           ]))
-        );
-      allow delete: if isVerifiedUser()
-        && isValidId(registrationId)
-        && (existing().ownerUid == request.auth.uid || isAdmin())
-        && !existsAfter(/databases/$(database)/documents/public_entries/$(registrationId));
+        && incoming().createdAt == existing().createdAt
+        && incoming().updatedAt == request.time;
+      allow delete: if isAdmin() && isValidId(registrationId);
     }
 
-    // Public non-PII Starting Grid entries
+    // Legacy public_entries locked down to Admin-only read/delete
     match /public_entries/{entryId} {
-      allow get: if isValidId(entryId) && resource.data.isPublic == true;
-      allow list: if resource.data.isPublic == true;
-      allow create: if isVerifiedUser()
-        && isValidId(entryId)
-        && isValidPublicEntry(incoming())
-        && incoming().ownerUid == request.auth.uid
-        && incoming().createdAt == request.time
-        && existsAfter(/databases/$(database)/documents/registrations/$(entryId));
-      allow update: if false;
-      allow delete: if isVerifiedUser()
-        && isValidId(entryId)
-        && (existing().ownerUid == request.auth.uid || isAdmin());
+      allow get: if isValidId(entryId) && isAdmin();
+      allow list: if isBootstrappedAdmin();
+      allow create, update: if false;
+      allow delete: if isAdmin() && isValidId(entryId);
     }
 
     // Committee Admins

@@ -1,69 +1,40 @@
 import React, { useMemo, useState } from 'react';
 import type { User } from 'firebase/auth';
-import { Download, Lock, LogIn, LogOut, ShieldCheck, X } from 'lucide-react';
+import { Download, LogIn, LogOut, ShieldCheck, X } from 'lucide-react';
 import { COMPETITIONS } from '../data/competitions';
 import { ADMIN_EMAIL } from '../firebase';
 import {
   CompetitionId,
   DivisionType,
-  PublicEntry,
   RegistrationEntry,
 } from '../types/competition';
 
 interface RegisteredGridSectionProps {
   user: User | null;
   isAdmin: boolean;
-  publicEntries: PublicEntry[];
   privateRegistrations: RegistrationEntry[];
+  showAdminModal: boolean;
+  onCloseAdminModal: () => void;
   onGoogleSignIn: (forceSelectAccount?: boolean) => Promise<void>;
   onSignOut: () => Promise<void>;
   onDeleteRegistration: (id: string) => Promise<void>;
-  onJumpToRegister: () => void;
 }
 
 export const RegisteredGridSection: React.FC<RegisteredGridSectionProps> = ({
   user,
   isAdmin,
-  publicEntries,
   privateRegistrations,
+  showAdminModal,
+  onCloseAdminModal,
   onGoogleSignIn,
   onSignOut,
   onDeleteRegistration,
-  onJumpToRegister,
 }) => {
   const [search, setSearch] = useState('');
   const [compFilter, setCompFilter] = useState<CompetitionId | 'all'>('all');
   const [divisionFilter, setDivisionFilter] = useState<DivisionType | 'all'>('all');
-  const [showAdminModal, setShowAdminModal] = useState(false);
   const [adminError, setAdminError] = useState('');
   const [deletingId, setDeletingId] = useState<string | null>(null);
-
-  const privateById = useMemo(() => {
-    const map = new Map<string, RegistrationEntry>();
-    for (const reg of privateRegistrations) {
-      map.set(reg.id, reg);
-    }
-    return map;
-  }, [privateRegistrations]);
-
-  const filteredPublic = useMemo(() => {
-    const q = search.trim().toLowerCase();
-    return publicEntries.filter((item) => {
-      if (compFilter !== 'all' && item.competitionId !== compFilter) return false;
-      if (divisionFilter !== 'all' && item.division !== divisionFilter) return false;
-      if (!q) return true;
-      const priv = privateById.get(item.id);
-      return (
-        item.displayName.toLowerCase().includes(q) ||
-        item.raceNumber.toLowerCase().includes(q) ||
-        (item.teamName && item.teamName.toLowerCase().includes(q)) ||
-        (priv &&
-          (priv.studentId.toLowerCase().includes(q) ||
-            (priv.englishFullName && priv.englishFullName.toLowerCase().includes(q)) ||
-            (priv.teamMembers && priv.teamMembers.toLowerCase().includes(q))))
-      );
-    });
-  }, [publicEntries, privateById, compFilter, divisionFilter, search]);
 
   const filteredAdmin = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -171,28 +142,25 @@ export const RegisteredGridSection: React.FC<RegisteredGridSectionProps> = ({
     filteredAdmin.length !== privateRegistrations.length && filteredAdmin.length > 0;
 
   return (
-    <section id="grid" className="border-b border-white/10 bg-[#0F1216] py-16">
-      <div className="mx-auto max-w-[1200px] px-6">
-        <div className="flex flex-col justify-between gap-4 border-b border-white/10 pb-8 lg:flex-row lg:items-end">
-          <div className="space-y-2">
-            <p className="text-sm font-medium text-[#D4AF37]">Starting Grid &amp; Verification</p>
-            <h2 className="font-display text-4xl font-bold tracking-tight text-white [text-wrap:balance]">
-              รายชื่อผู้สมัครและตรวจสอบสถานะ
-            </h2>
-            <p className="text-sm text-neutral-400">
-              ข้อมูลทั้งหมดบันทึกบนฐานข้อมูลคลาวด์แบบเรียลไทม์ (การดาวน์โหลด CSV และดูเบอร์ติดต่อสงวนสิทธิ์เฉพาะแอดมิน)
-            </p>
-          </div>
-
-          {/* Admin Mode Controls */}
-          <div className="flex flex-wrap items-center gap-2.5">
-            {isAdmin ? (
-              <>
-                <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-emerald-400 mr-1">
+    <>
+      {isAdmin && (
+        <section id="admin-panel" className="border-b border-white/10 bg-[#0F1216] py-16">
+          <div className="mx-auto max-w-[1200px] px-6">
+            <div className="flex flex-col justify-between gap-4 border-b border-white/10 pb-8 lg:flex-row lg:items-end">
+              <div className="space-y-2">
+                <p className="inline-flex items-center gap-1.5 text-sm font-semibold text-emerald-400">
                   <ShieldCheck className="h-4 w-4" />
                   โหมดแอดมิน ({user?.email})
-                </span>
+                </p>
+                <h2 className="font-display text-4xl font-bold tracking-tight text-white [text-wrap:balance]">
+                  จัดการข้อมูลผู้สมัครและส่งออก CSV
+                </h2>
+                <p className="text-sm text-neutral-400">
+                  ส่วนนี้แสดงเฉพาะผู้ดูแลระบบที่ยืนยันตัวตนแล้วเท่านั้น
+                </p>
+              </div>
 
+              <div className="flex flex-wrap items-center gap-2.5">
                 <button
                   type="button"
                   onClick={() => handleExportCsv(privateRegistrations, 'all')}
@@ -222,288 +190,173 @@ export const RegisteredGridSection: React.FC<RegisteredGridSectionProps> = ({
                   <LogOut className="h-3.5 w-3.5" />
                   ออกจากแอดมิน
                 </button>
-              </>
+              </div>
+            </div>
+
+            {/* Admin Search & Filters */}
+            <div className="mt-6 grid grid-cols-1 gap-3 md:grid-cols-12">
+              <div className="md:col-span-5">
+                <label htmlFor="admin-search" className="sr-only">
+                  ค้นหาผู้สมัคร
+                </label>
+                <input
+                  id="admin-search"
+                  type="search"
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  placeholder="ค้นหาชื่อ, เลขประจำตัว, ชื่อทีม หรือ #UP-..."
+                  className="w-full rounded-lg border border-white/15 bg-[#0B0D0F] px-4 py-2.5 text-sm text-white placeholder:text-neutral-500 focus:border-[#E10600] focus:outline-none"
+                />
+              </div>
+
+              <div className="md:col-span-4">
+                <label htmlFor="admin-comp-filter" className="sr-only">
+                  กรองตามรายการแข่งขัน
+                </label>
+                <select
+                  id="admin-comp-filter"
+                  value={compFilter}
+                  onChange={(e) => setCompFilter(e.target.value as CompetitionId | 'all')}
+                  className="w-full rounded-lg border border-white/15 bg-[#0B0D0F] px-4 py-2.5 text-sm text-white focus:border-[#E10600] focus:outline-none"
+                >
+                  <option value="all">ทุกรายการแข่งขัน (6)</option>
+                  {COMPETITIONS.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.code}. {c.title}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="md:col-span-3">
+                <label htmlFor="admin-div-filter" className="sr-only">
+                  กรองตามระดับชั้น
+                </label>
+                <select
+                  id="admin-div-filter"
+                  value={divisionFilter}
+                  onChange={(e) => setDivisionFilter(e.target.value as DivisionType | 'all')}
+                  className="w-full rounded-lg border border-white/15 bg-[#0B0D0F] px-4 py-2.5 text-sm text-white focus:border-[#E10600] focus:outline-none"
+                >
+                  <option value="all">ทุกรุ่น (ม.ต้น / ม.ปลาย / รวมทุกระดับ)</option>
+                  <option value="junior">ม.ต้น</option>
+                  <option value="senior">ม.ปลาย</option>
+                  <option value="open">รวมทุกระดับ (Drawing &amp; Cover Dance)</option>
+                </select>
+              </div>
+            </div>
+
+            {privateRegistrations.length === 0 ? (
+              <div className="mt-8 rounded-xl border border-white/10 bg-[#12151A] px-6 py-12 text-center">
+                <h3 className="font-display text-2xl font-bold text-white">
+                  ยังไม่มีข้อมูลผู้สมัครในฐานข้อมูล
+                </h3>
+                <p className="mx-auto mt-2 max-w-[48ch] text-sm text-neutral-400">
+                  เมื่อนักเรียนส่งใบสมัคร รายชื่อทั้งหมดจะปรากฏที่นี่และสามารถดาวน์โหลดเป็น CSV ได้ทันที
+                </p>
+              </div>
+            ) : filteredAdmin.length === 0 ? (
+              <div className="mt-8 rounded-xl border border-white/10 bg-[#12151A] px-6 py-10 text-center">
+                <p className="text-sm text-neutral-300">ไม่พบข้อมูลที่ตรงกับเงื่อนไขการค้นหา</p>
+              </div>
             ) : (
-              <button
-                type="button"
-                onClick={() => {
-                  setAdminError('');
-                  setShowAdminModal(true);
-                }}
-                className="inline-flex items-center gap-2 whitespace-nowrap shrink-0 rounded-md border border-white/15 bg-[#161B22] px-4 py-2.5 text-xs font-semibold text-white transition-colors hover:border-[#D4AF37] hover:text-[#D4AF37] cursor-pointer"
-              >
-                <Lock className="h-3.5 w-3.5" />
-                เข้าสู่โหมดแอดมิน (สำหรับโหลด CSV)
-              </button>
-            )}
-          </div>
-        </div>
-
-        {/* Search and Filter Controls */}
-        <div className="mt-6 grid grid-cols-1 gap-3 md:grid-cols-12">
-          <div className="md:col-span-5">
-            <label htmlFor="grid-search" className="sr-only">
-              ค้นหารายชื่อผู้สมัคร
-            </label>
-            <input
-              id="grid-search"
-              type="search"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="ค้นหาชื่อ, ชื่อทีม หรือ #UP-..."
-              className="w-full rounded-lg border border-white/15 bg-[#0B0D0F] px-4 py-2.5 text-sm text-white placeholder:text-neutral-500 focus:border-[#E10600] focus:outline-none"
-            />
-          </div>
-
-          <div className="md:col-span-4">
-            <label htmlFor="grid-comp-filter" className="sr-only">
-              กรองตามรายการแข่งขัน
-            </label>
-            <select
-              id="grid-comp-filter"
-              value={compFilter}
-              onChange={(e) => setCompFilter(e.target.value as CompetitionId | 'all')}
-              className="w-full rounded-lg border border-white/15 bg-[#0B0D0F] px-4 py-2.5 text-sm text-white focus:border-[#E10600] focus:outline-none"
-            >
-              <option value="all">ทุกรายการแข่งขัน (6)</option>
-              {COMPETITIONS.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.code}. {c.title}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div className="md:col-span-3">
-            <label htmlFor="grid-div-filter" className="sr-only">
-              กรองตามระดับชั้น
-            </label>
-            <select
-              id="grid-div-filter"
-              value={divisionFilter}
-              onChange={(e) => setDivisionFilter(e.target.value as DivisionType | 'all')}
-              className="w-full rounded-lg border border-white/15 bg-[#0B0D0F] px-4 py-2.5 text-sm text-white focus:border-[#E10600] focus:outline-none"
-            >
-              <option value="all">ทุกรุ่น (ม.ต้น / ม.ปลาย / รวมทุกระดับ)</option>
-              <option value="junior">ม.ต้น</option>
-              <option value="senior">ม.ปลาย</option>
-              <option value="open">รวมทุกระดับ (Drawing &amp; Cover Dance)</option>
-            </select>
-          </div>
-        </div>
-
-        {/* Admin Full Table vs Public Safe Table */}
-        {isAdmin ? (
-          privateRegistrations.length === 0 ? (
-            <div className="mt-8 rounded-xl border border-white/10 bg-[#12151A] px-6 py-12 text-center">
-              <h3 className="font-display text-2xl font-bold text-white">
-                ยังไม่มีผู้สมัครในฐานข้อมูล
-              </h3>
-              <p className="mx-auto mt-2 max-w-[48ch] text-sm text-neutral-400">
-                เมื่อนักเรียนลงทะเบียน รายชื่อทั้งหมดจะปรากฏที่นี่โดยอัตโนมัติและสามารถส่งออกเป็น CSV ได้ทันที
-              </p>
-            </div>
-          ) : filteredAdmin.length === 0 ? (
-            <div className="mt-8 rounded-xl border border-white/10 bg-[#12151A] px-6 py-10 text-center">
-              <p className="text-sm text-neutral-300">ไม่พบรายชื่อที่ตรงกับเงื่อนไขการค้นหา</p>
-            </div>
-          ) : (
-            <div className="mt-6 overflow-x-auto rounded-xl border border-white/10 bg-[#12151A]">
-              <table className="w-full min-w-[820px] border-collapse text-left">
-                <thead>
-                  <tr className="border-b border-white/10 bg-[#171B22] text-xs font-semibold text-neutral-300">
-                    <th className="px-5 py-3.5 font-mono">Race Pass</th>
-                    <th className="px-5 py-3.5">รายการแข่งขัน</th>
-                    <th className="px-5 py-3.5">รุ่น</th>
-                    <th className="px-5 py-3.5">ผู้สมัคร / ทีม</th>
-                    <th className="px-5 py-3.5">ชั้น / รหัส</th>
-                    <th className="px-5 py-3.5">เบอร์ติดต่อ</th>
-                    <th className="px-5 py-3.5">รายละเอียดผลงาน</th>
-                    <th className="px-5 py-3.5 text-right">จัดการ</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-white/10 text-sm">
-                  {filteredAdmin.map((entry) => {
-                    const comp = COMPETITIONS.find((c) => c.id === entry.competitionId);
-                    return (
-                      <tr key={entry.id} className="hover:bg-white/[0.03]">
-                        <td className="px-5 py-4 font-mono text-xs font-semibold text-[#D4AF37] tabular-nums">
-                          {entry.raceNumber}
-                        </td>
-                        <td className="px-5 py-4 font-medium text-white">
-                          {comp?.title ?? entry.competitionId}
-                        </td>
-                        <td className="px-5 py-4">
-                          <span
-                            className={
-                              entry.division === 'open'
-                                ? 'text-xs font-semibold text-[#D4AF37]'
-                                : 'text-xs text-emerald-400'
-                            }
-                          >
-                            {getDivisionLabel(entry.division)}
-                          </span>
-                        </td>
-                        <td className="px-5 py-4">
-                          <div className="font-medium text-white">{entry.studentName}</div>
-                          {entry.englishFullName && (
-                            <div className="text-xs text-neutral-400">{entry.englishFullName}</div>
-                          )}
-                          {entry.teamName && (
-                            <div className="text-xs text-[#D4AF37]">
-                              ทีม: {entry.teamName}
-                              {entry.teamMembersList
-                                ? ` (${entry.teamMembersList.length} คน)`
-                                : ''}
-                            </div>
-                          )}
-                          {entry.teamMembers && (
-                            <div className="mt-0.5 text-xs text-neutral-400">
-                              {entry.teamMembers}
-                            </div>
-                          )}
-                        </td>
-                        <td className="px-5 py-4 font-mono text-xs text-neutral-300 tabular-nums">
-                          {entry.gradeLevel}/{entry.classroom} · {entry.studentId}
-                        </td>
-                        <td className="px-5 py-4 font-mono text-xs text-neutral-300 tabular-nums">
-                          {entry.contactInfo}
-                        </td>
-                        <td className="px-5 py-4 text-xs text-neutral-300">
-                          {entry.submissionTitle && <div>{entry.submissionTitle}</div>}
-                          {entry.submissionUrl && (
-                            <a
-                              href={entry.submissionUrl}
-                              target="_blank"
-                              rel="noreferrer"
-                              className="text-[#E10600] underline hover:text-white"
+              <div className="mt-6 overflow-x-auto rounded-xl border border-white/10 bg-[#12151A]">
+                <table className="w-full min-w-[820px] border-collapse text-left">
+                  <thead>
+                    <tr className="border-b border-white/10 bg-[#171B22] text-xs font-semibold text-neutral-300">
+                      <th className="px-5 py-3.5 font-mono">Race Pass</th>
+                      <th className="px-5 py-3.5">รายการแข่งขัน</th>
+                      <th className="px-5 py-3.5">รุ่น</th>
+                      <th className="px-5 py-3.5">ผู้สมัคร / ทีม</th>
+                      <th className="px-5 py-3.5">ชั้น / รหัส</th>
+                      <th className="px-5 py-3.5">เบอร์ติดต่อ</th>
+                      <th className="px-5 py-3.5">รายละเอียดผลงาน</th>
+                      <th className="px-5 py-3.5 text-right">จัดการ</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-white/10 text-sm">
+                    {filteredAdmin.map((entry) => {
+                      const comp = COMPETITIONS.find((c) => c.id === entry.competitionId);
+                      return (
+                        <tr key={entry.id} className="hover:bg-white/[0.03]">
+                          <td className="px-5 py-4 font-mono text-xs font-semibold text-[#D4AF37] tabular-nums">
+                            {entry.raceNumber}
+                          </td>
+                          <td className="px-5 py-4 font-medium text-white">
+                            {comp?.title ?? entry.competitionId}
+                          </td>
+                          <td className="px-5 py-4">
+                            <span
+                              className={
+                                entry.division === 'open'
+                                  ? 'text-xs font-semibold text-[#D4AF37]'
+                                  : 'text-xs text-emerald-400'
+                              }
                             >
-                              เปิดลิงก์คลิป
-                            </a>
-                          )}
-                          {!entry.submissionTitle && !entry.submissionUrl && (
-                            <span className="text-neutral-500">รอส่งผลงานตามกำหนด</span>
-                          )}
-                        </td>
-                        <td className="px-5 py-4 text-right">
-                          <button
-                            type="button"
-                            disabled={deletingId === entry.id}
-                            onClick={() => handleDelete(entry.id)}
-                            className="whitespace-nowrap shrink-0 text-xs font-medium text-neutral-400 transition-colors hover:text-[#F87171] disabled:opacity-40 cursor-pointer"
-                          >
-                            {deletingId === entry.id ? 'กำลังลบ...' : 'ลบรายการ'}
-                          </button>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-          )
-        ) : publicEntries.length === 0 ? (
-          <div className="mt-8 rounded-xl border border-white/10 bg-[#12151A] px-6 py-12 text-center">
-            <h3 className="font-display text-2xl font-bold text-white">
-              ยังไม่มีผู้สมัครในระบบ
-            </h3>
-            <p className="mx-auto mt-2 max-w-[48ch] text-sm text-neutral-400">
-              เมื่อนักเรียนกรอกแบบฟอร์มสมัครแข่งขันด้านบน ข้อมูลจะถูกบันทึกถาวรบนฐานข้อมูลคลาวด์และแสดงในตารางนี้ทันที
-            </p>
-            <button
-              type="button"
-              onClick={onJumpToRegister}
-              className="mt-6 whitespace-nowrap shrink-0 rounded-md bg-[#E10600] px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-[#B80500] cursor-pointer"
-            >
-              ไปยังแบบฟอร์มรับสมัคร
-            </button>
-          </div>
-        ) : filteredPublic.length === 0 ? (
-          <div className="mt-8 rounded-xl border border-white/10 bg-[#12151A] px-6 py-10 text-center">
-            <p className="text-sm text-neutral-300">ไม่พบรายชื่อที่ตรงกับเงื่อนไขการค้นหา</p>
-          </div>
-        ) : (
-          <div className="mt-6 overflow-x-auto rounded-xl border border-white/10 bg-[#12151A]">
-            <table className="w-full min-w-[700px] border-collapse text-left">
-              <thead>
-                <tr className="border-b border-white/10 bg-[#171B22] text-xs font-semibold text-neutral-300">
-                  <th className="px-5 py-3.5 font-mono">Race Pass</th>
-                  <th className="px-5 py-3.5">รายการแข่งขัน</th>
-                  <th className="px-5 py-3.5">รุ่น</th>
-                  <th className="px-5 py-3.5">ผู้สมัคร / ทีม</th>
-                  <th className="px-5 py-3.5">ชั้น / ห้อง</th>
-                  <th className="px-5 py-3.5 text-right">สถานะ</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-white/10 text-sm">
-                {filteredPublic.map((entry) => {
-                  const comp = COMPETITIONS.find((c) => c.id === entry.competitionId);
-                  const isOwn = Boolean(user && entry.ownerUid === user.uid);
-                  const ownPrivate = isOwn ? privateById.get(entry.id) : undefined;
-                  return (
-                    <tr key={entry.id} className="hover:bg-white/[0.03]">
-                      <td className="px-5 py-4 font-mono text-xs font-semibold text-[#D4AF37] tabular-nums">
-                        {entry.raceNumber}
-                      </td>
-                      <td className="px-5 py-4 font-medium text-white">
-                        {comp?.title ?? entry.competitionId}
-                      </td>
-                      <td className="px-5 py-4">
-                        <span
-                          className={
-                            entry.division === 'open'
-                              ? 'text-xs font-semibold text-[#D4AF37]'
-                              : 'text-xs text-emerald-400'
-                          }
-                        >
-                          {getDivisionLabel(entry.division)}
-                        </span>
-                      </td>
-                      <td className="px-5 py-4">
-                        <div className="font-medium text-white">{entry.displayName}</div>
-                        {entry.teamName && (
-                          <div className="text-xs text-[#D4AF37]">
-                            ทีม: {entry.teamName}
-                            {entry.teamMemberCount ? ` (${entry.teamMemberCount} คน)` : ''}
-                          </div>
-                        )}
-                        {ownPrivate?.teamMembers && (
-                          <div className="mt-0.5 text-xs text-neutral-400">
-                            {ownPrivate.teamMembers}
-                          </div>
-                        )}
-                      </td>
-                      <td className="px-5 py-4 font-mono text-xs text-neutral-300 tabular-nums">
-                        {entry.gradeLevel}/{entry.classroom}
-                        {ownPrivate ? ` · ${ownPrivate.studentId}` : ''}
-                      </td>
-                      <td className="px-5 py-4 text-right">
-                        {isOwn ? (
-                          <div className="flex items-center justify-end gap-3">
-                            <span className="text-xs font-medium text-emerald-400">
-                              รายการของคุณ
+                              {getDivisionLabel(entry.division)}
                             </span>
+                          </td>
+                          <td className="px-5 py-4">
+                            <div className="font-medium text-white">{entry.studentName}</div>
+                            {entry.englishFullName && (
+                              <div className="text-xs text-neutral-400">{entry.englishFullName}</div>
+                            )}
+                            {entry.teamName && (
+                              <div className="text-xs text-[#D4AF37]">
+                                ทีม: {entry.teamName}
+                                {entry.teamMembersList
+                                  ? ` (${entry.teamMembersList.length} คน)`
+                                  : ''}
+                              </div>
+                            )}
+                            {entry.teamMembers && (
+                              <div className="mt-0.5 text-xs text-neutral-400">
+                                {entry.teamMembers}
+                              </div>
+                            )}
+                          </td>
+                          <td className="px-5 py-4 font-mono text-xs text-neutral-300 tabular-nums">
+                            {entry.gradeLevel}/{entry.classroom} · {entry.studentId}
+                          </td>
+                          <td className="px-5 py-4 font-mono text-xs text-neutral-300 tabular-nums">
+                            {entry.contactInfo}
+                          </td>
+                          <td className="px-5 py-4 text-xs text-neutral-300">
+                            {entry.submissionTitle && <div>{entry.submissionTitle}</div>}
+                            {entry.submissionUrl && (
+                              <a
+                                href={entry.submissionUrl}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="text-[#E10600] underline hover:text-white"
+                              >
+                                เปิดลิงก์คลิป
+                              </a>
+                            )}
+                            {!entry.submissionTitle && !entry.submissionUrl && (
+                              <span className="text-neutral-500">รอส่งผลงานตามกำหนด</span>
+                            )}
+                          </td>
+                          <td className="px-5 py-4 text-right">
                             <button
                               type="button"
                               disabled={deletingId === entry.id}
                               onClick={() => handleDelete(entry.id)}
                               className="whitespace-nowrap shrink-0 text-xs font-medium text-neutral-400 transition-colors hover:text-[#F87171] disabled:opacity-40 cursor-pointer"
                             >
-                              {deletingId === entry.id ? 'กำลังยกเลิก...' : 'ยกเลิกสมัคร'}
+                              {deletingId === entry.id ? 'กำลังลบ...' : 'ลบรายการ'}
                             </button>
-                          </div>
-                        ) : (
-                          <span className="text-xs text-neutral-400">ลงทะเบียนแล้ว</span>
-                        )}
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )}
           </div>
-        )}
-      </div>
+        </section>
+      )}
 
       {/* Admin Google Auth Modal */}
       {showAdminModal && !isAdmin && (
@@ -512,7 +365,7 @@ export const RegisteredGridSection: React.FC<RegisteredGridSectionProps> = ({
           role="dialog"
           aria-modal="true"
           aria-labelledby="admin-login-title"
-          onClick={() => setShowAdminModal(false)}
+          onClick={onCloseAdminModal}
         >
           <div
             className="w-full max-w-md rounded-xl border border-white/15 bg-[#12151A] p-6 space-y-5"
@@ -529,7 +382,7 @@ export const RegisteredGridSection: React.FC<RegisteredGridSectionProps> = ({
               </div>
               <button
                 type="button"
-                onClick={() => setShowAdminModal(false)}
+                onClick={onCloseAdminModal}
                 aria-label="ปิดหน้าต่าง"
                 className="rounded-md border border-white/15 p-1.5 text-neutral-300 hover:bg-white/10 hover:text-white cursor-pointer"
               >
@@ -539,10 +392,9 @@ export const RegisteredGridSection: React.FC<RegisteredGridSectionProps> = ({
 
             <div className="space-y-4 text-xs leading-relaxed text-neutral-300">
               <p>
-                การเข้าถึงข้อมูลเบอร์ติดต่อและดาวน์โหลดรายชื่อเป็นไฟล์ CSV
-                สงวนสิทธิ์เฉพาะบัญชีผู้ดูแลระบบของกลุ่มสาระฯ (
+                การเข้าดูรายชื่อผู้สมัครและดาวน์โหลดไฟล์ CSV สงวนสิทธิ์เฉพาะบัญชีผู้ดูแลระบบของกลุ่มสาระฯ (
                 <span className="font-mono text-[#D4AF37]">{ADMIN_EMAIL}</span>)
-                ที่ยืนยันตัวตนผ่าน Google แล้วเท่านั้น
+                เท่านั้น
               </p>
 
               {user && user.email !== ADMIN_EMAIL && (
@@ -557,7 +409,7 @@ export const RegisteredGridSection: React.FC<RegisteredGridSectionProps> = ({
               <div className="flex items-center justify-end gap-3 pt-2">
                 <button
                   type="button"
-                  onClick={() => setShowAdminModal(false)}
+                  onClick={onCloseAdminModal}
                   className="whitespace-nowrap shrink-0 rounded-md border border-white/15 px-4 py-2 text-xs font-medium text-neutral-300 hover:text-white cursor-pointer"
                 >
                   ปิด
@@ -575,6 +427,6 @@ export const RegisteredGridSection: React.FC<RegisteredGridSectionProps> = ({
           </div>
         </div>
       )}
-    </section>
+    </>
   );
 };

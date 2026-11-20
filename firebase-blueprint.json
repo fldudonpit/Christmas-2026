@@ -2,16 +2,9 @@
   "entities": {
     "Registration": {
       "title": "Registration",
-      "description": "Full private competition registration record including student contact PII, readable only by the registrant and admins.",
+      "description": "Full competition registration record including student contact PII, write-only for submitting students and readable/manageable strictly by verified committee admins.",
       "type": "object",
       "properties": {
-        "ownerUid": {
-          "type": "string",
-          "description": "Firebase Auth UID of the registering student",
-          "minLength": 1,
-          "maxLength": 128,
-          "pattern": "^[a-zA-Z0-9_\\-]+$"
-        },
         "raceNumber": {
           "type": "string",
           "description": "Competitor Race Pass identifier",
@@ -107,7 +100,6 @@
         }
       },
       "required": [
-        "ownerUid",
         "raceNumber",
         "competitionId",
         "division",
@@ -118,90 +110,6 @@
         "contactInfo",
         "createdAt",
         "updatedAt"
-      ]
-    },
-    "PublicEntry": {
-      "title": "PublicEntry",
-      "description": "Public non-PII summary record for the Starting Grid and live competition counts.",
-      "type": "object",
-      "properties": {
-        "ownerUid": {
-          "type": "string",
-          "description": "Firebase Auth UID of the registrant",
-          "minLength": 1,
-          "maxLength": 128,
-          "pattern": "^[a-zA-Z0-9_\\-]+$"
-        },
-        "raceNumber": {
-          "type": "string",
-          "description": "Competitor Race Pass identifier",
-          "minLength": 4,
-          "maxLength": 24,
-          "pattern": "^#UP-[A-Z0-9\\-]+$"
-        },
-        "competitionId": {
-          "type": "string",
-          "description": "Competition identifier",
-          "enum": [
-            "singing-contest",
-            "christmas-card",
-            "speech",
-            "drawing-painting",
-            "english-quiz",
-            "cover-dance"
-          ]
-        },
-        "division": {
-          "type": "string",
-          "description": "Competition level division",
-          "enum": ["junior", "senior", "open"]
-        },
-        "displayName": {
-          "type": "string",
-          "description": "Public display name or team name",
-          "minLength": 2,
-          "maxLength": 150
-        },
-        "gradeLevel": {
-          "type": "string",
-          "description": "Grade level",
-          "enum": ["ม.1", "ม.2", "ม.3", "ม.4", "ม.5", "ม.6"]
-        },
-        "classroom": {
-          "type": "string",
-          "description": "Classroom identifier",
-          "minLength": 1,
-          "maxLength": 20
-        },
-        "teamName": {
-          "type": "string",
-          "description": "Team name if Cover Dance",
-          "maxLength": 100
-        },
-        "teamMemberCount": {
-          "type": "number",
-          "description": "Count of team members (1-10)"
-        },
-        "isPublic": {
-          "type": "boolean",
-          "description": "Must be true for public starting grid visibility"
-        },
-        "createdAt": {
-          "type": "string",
-          "format": "date-time",
-          "description": "Server timestamp when created"
-        }
-      },
-      "required": [
-        "ownerUid",
-        "raceNumber",
-        "competitionId",
-        "division",
-        "displayName",
-        "gradeLevel",
-        "classroom",
-        "isPublic",
-        "createdAt"
       ]
     },
     "AdminUser": {
@@ -234,11 +142,7 @@
   "firestore": {
     "/registrations/{registrationId}": {
       "schema": { "$ref": "#/entities/Registration" },
-      "description": "Private full registration documents containing student phone PII; accessible only by owner or admin."
-    },
-    "/public_entries/{entryId}": {
-      "schema": { "$ref": "#/entities/PublicEntry" },
-      "description": "Public non-PII starting grid entries atomically paired with registrations."
+      "description": "Private full registration documents containing student PII; publicly write-only on creation and strictly readable/updatable/deletable by verified admins."
     },
     "/admins/{adminUid}": {
       "schema": { "$ref": "#/entities/AdminUser" },

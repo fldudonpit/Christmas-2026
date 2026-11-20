@@ -24,7 +24,7 @@ export const COMPETITIONS: Competition[] = [
       'เข้าแข่งขันแบบเดี่ยวเท่านั้น (Individual Competition)',
       'ขับร้องเพลงภาษาอังกฤษเท่านั้น (English Songs Only)',
       'บันทึกคลิปวิดีโอการร้องเพลงให้เห็นผู้เข้าแข่งขันและได้ยินเสียงชัดเจน',
-      'ส่งคลิปวิดีโอไปยังอีเมลประจำระดับชั้นของผู้เข้าแข่งขัน (ม.ต้น: panan.pro@cru.ac.th · ม.ปลาย: Thanarak@udonpit.ac.th)',
+      'ส่งคลิปวิดีโอไปยังอีเมลประจำระดับชั้นของผู้เข้าแข่งขัน (ม.ต้น: Thanarak@udonpit.ac.th · ม.ปลาย: panan.pro@cru.ac.th)',
       'แสดงทักษะคุณภาพเสียง การออกเสียง จังหวะ บุคลิกภาพบนเวที และความแม่นยำของเนื้อเพลง',
     ],
     judgingCriteria: [
@@ -52,14 +52,15 @@ export const COMPETITIONS: Competition[] = [
     contacts: [
       {
         level: 'ม.ต้น (Lower Secondary · M.1–M.3)',
-        email: 'panan.pro@cru.ac.th',
-        note: 'LINE OpenChat: รอประกาศเพิ่มเติม (To be announced)',
-      },
-      {
-        level: 'ม.ปลาย (Upper Secondary · M.4–M.6)',
         email: 'Thanarak@udonpit.ac.th',
         lineOpenChat:
           'https://line.me/ti/g2/v0dovbqdcXrGMHimoqHbmUR-VbI5y8ZJeeAgpA?utm_source=invitation&utm_medium=QR_code&utm_campaign=default',
+      },
+      {
+        level: 'ม.ปลาย (Upper Secondary · M.4–M.6)',
+        email: 'panan.pro@cru.ac.th',
+        lineOpenChat:
+          'https://line.me/ti/g2/qRQJ9oG6yQkZrOwAjtKzSgGJdlxNToaJTexCaw?utm_source=invitation&utm_medium=link_copy&utm_campaign=default',
       },
     ],
     dateGroup: 'dec8_submit',
@@ -100,11 +101,15 @@ export const COMPETITIONS: Competition[] = [
         level: 'ม.ต้น (Lower Secondary · M.1–M.3)',
         room: 'Room 421 (ห้อง 421)',
         teacher: 'Teacher Wan',
+        lineOpenChat:
+          'https://line.me/ti/g2/9v4L346mnBt-2tlYEVMnPW49wpgOsbsd0gyr5w?utm_source=invitation&utm_medium=link_copy&utm_campaign=default',
       },
       {
         level: 'ม.ปลาย (Upper Secondary · M.4–M.6)',
         room: 'Room 412 (ห้อง 412)',
         teacher: 'Teacher Araya',
+        lineOpenChat:
+          'https://line.me/ti/g2/eq8TqOYNkwafElLI_6uLzbUqT5OtpteYOlcvMg?utm_source=invitation&utm_medium=link_copy&utm_campaign=default',
       },
     ],
     dateGroup: 'dec8_submit',
@@ -254,13 +259,13 @@ export const COMPETITIONS: Competition[] = [
     divisionMode: 'split',
     divisionLabel: 'แยก ม.ต้น (M.1–M.3) / ม.ปลาย (M.4–M.6)',
     channel: 'onsite_live',
-    venueOrType: 'แข่งสดที่โรงเรียน (ห้องรอประกาศเพิ่มเติม)',
-    dateLabel: '8 ธ.ค. 2569',
-    submissionDeadline: 'December 8, 2026 (8 ธันวาคม 2569)',
+    venueOrType: 'ห้อง 425 (ม.ต้น) / ห้อง 426 (ม.ปลาย)',
+    dateLabel: '15 ธ.ค. 2569',
+    submissionDeadline: 'December 15, 2026 (15 ธันวาคม 2569)',
     themeTopic: 'General Knowledge & Christmas Knowledge',
     teamFormat: 'ประเภทเดี่ยว (Individual · นักเรียนปีการศึกษา 2569)',
     summary:
-      'แข่งขันตอบปัญหาภาษาอังกฤษประเภทเดี่ยว แบ่งเป็น 2 รอบ (Preliminary Round 30 ข้อ และ Final Round 5 คนสุดท้าย) วันที่ 8 ธันวาคม 2569',
+      'แข่งขันตอบปัญหาภาษาอังกฤษประเภทเดี่ยว แบ่งเป็น 2 รอบ (Preliminary Round 30 ข้อ และ Final Round 5 คนสุดท้าย) วันที่ 15 ธันวาคม 2569 ณ ห้อง 425 (ม.ต้น) และห้อง 426 (ม.ปลาย)',
     rules: [
       'เปิดรับนักเรียนโรงเรียนอุดรพิทยานุกูลที่กำลังศึกษาในปีการศึกษา 2569 แยกประเภท ม.ต้น และ ม.ปลาย',
       'เข้าแข่งขันแบบเดี่ยวเท่านั้น (Individual Competition)',
@@ -293,14 +298,14 @@ export const COMPETITIONS: Competition[] = [
     contacts: [
       {
         level: 'ม.ต้น (Lower Secondary · M.1–M.3)',
-        room: 'รอประกาศห้องแข่งขัน (To be announced)',
+        room: 'Room 425 (ห้อง 425)',
       },
       {
         level: 'ม.ปลาย (Upper Secondary · M.4–M.6)',
-        room: 'รอประกาศห้องแข่งขัน (To be announced)',
+        room: 'Room 426 (ห้อง 426)',
       },
     ],
-    dateGroup: 'dec8_live',
+    dateGroup: 'dec15_live',
   },
   {
     index: 6,
@@ -312,13 +317,13 @@ export const COMPETITIONS: Competition[] = [
     divisionMode: 'open',
     divisionLabel: 'รวมทุกระดับชั้น (Combined Levels · ไม่แยก ม.ต้น/ม.ปลาย)',
     channel: 'hybrid_stage',
-    venueOrType: 'ส่งลิงก์คลิป 8 ธ.ค. · แข่งจริง 18 ธ.ค. ณ โดมอเนกประสงค์',
-    dateLabel: 'ส่งคลิป 8 ธ.ค. (23:59 น.) · รอบชิง 18 ธ.ค. 2569',
-    submissionDeadline: 'Audition: December 8, 2026 (11:59 PM) · Live: December 18, 2026',
+    venueOrType: 'ส่งลิงก์คลิป 8 ธ.ค. · จับฉลาก 14 ธ.ค. · แข่งจริง 18 ธ.ค. ณ โดมอเนกประสงค์',
+    dateLabel: 'ส่งคลิป 8 ธ.ค. · จับฉลาก 14 ธ.ค. · รอบชิง 18 ธ.ค. 2569',
+    submissionDeadline: 'ส่งคลิป 8 ธ.ค. 2569 (23:59 น.) · จับฉลาก 14 ธ.ค. 2569 · แข่งจริง 18 ธ.ค. 2569',
     themeTopic: 'Christmas Cover Dance',
     teamFormat: 'ประเภททีม ไม่เกิน 10 คน (คละระดับชั้นได้ · เฉพาะนักเรียนอุดรพิทย์)',
     summary:
-      'การประกวดเต้นทีมรวมทุกระดับชั้น ส่งคลิป One-Take รอบคัดเลือกผ่าน YouTube หรือ Google Drive ภายใน 8 ธ.ค. เวลา 23:59 น. เพื่อขึ้นแสดงรอบชิงวันที่ 18 ธ.ค. ณ โดมอเนกประสงค์ ชิงเกียรติบัตร และของรางวัลสุดพิเศษ',
+      'การประกวดเต้นทีมรวมทุกระดับชั้น ส่งคลิป One-Take รอบคัดเลือกผ่าน YouTube หรือ Google Drive ภายใน 8 ธ.ค. เวลา 23:59 น. จับฉลากลำดับการแสดง 14 ธ.ค. (จะแจ้งเวลา/สถานที่ใน OpenChat) และขึ้นแสดงรอบชิง 18 ธ.ค. ณ โดมอเนกประสงค์ ชิงเกียรติบัตร และของรางวัลสุดพิเศษ',
     rules: [
       'เปิดรับเฉพาะนักเรียนโรงเรียนอุดรพิทยานุกูลเท่านั้น รวมทุกระดับชั้น (ไม่แยก ม.ต้น/ม.ปลาย)',
       'สมาชิกในทีมไม่เกิน 10 คน และสมาชิกในคลิปรอบคัดเลือกต้องเป็นชุดเดียวกับผู้ขึ้นแสดงวันแข่งจริงทั้งหมด',
@@ -326,22 +331,16 @@ export const COMPETITIONS: Competition[] = [
       'คลิปออดิชันต้องถ่ายแบบต่อเนื่องรวดเดียวจบ (One-Take) ห้ามตัดต่อ และห้ามขยับ/เคลื่อนกล้อง',
       'ในคลิปออดิชันสามารถสวมชุดพละของโรงเรียนหรือชุดแสดงก็ได้ (เครื่องแต่งกายไม่มีผลต่อคะแนนรอบคัดเลือก)',
       'อัปโหลดคลิปขึ้น YouTube หรือ Google Drive และส่งเฉพาะลิงก์วิดีโอภายในวันที่ 8 ธันวาคม 2569 เวลา 23:59 น. (ทีมที่ไม่ส่งคลิปจะไม่มีสิทธิ์แข่งรอบสด)',
-      'ลำดับการแสดงวันจริงกำหนดโดยการจับสลาก (วันจับสลากรอประกาศ) และผลการตัดสินของกรรมการถือเป็นที่สิ้นสุด',
+      'ลำดับการแสดงวันจริงกำหนดโดยการจับฉลากในวันที่ 14 ธันวาคม 2569 (จะแจ้งเวลาและสถานที่ใน LINE OpenChat) และผลการตัดสินของกรรมการถือเป็นที่สิ้นสุด',
     ],
-    judgingCriteria: [
-      {
-        label: 'เกณฑ์การตัดสิน (Judging Criteria)',
-        description: 'รอประกาศเพิ่มเติม (To be announced)',
-      },
-    ],
-    judgingNote: 'เกณฑ์การให้คะแนนรอประกาศเพิ่มเติมทาง LINE OpenChat ของรายการ Cover Dance',
+    judgingCriteria: [],
     contacts: [
       {
         level: 'รวมทุกระดับชั้น (Combined Levels · M.1–M.6)',
         room: 'โดมอเนกประสงค์ (วันแข่งจริง 18 ธ.ค. 2569)',
         lineOpenChat:
           'https://line.me/ti/g2/AiPVsbdPVF-Z6YsazCbb2j52WTsKvxzwZcsKrQ?utm_source=invitation&utm_medium=link_copy&utm_campaign=default',
-        note: 'ส่งเฉพาะลิงก์ YouTube หรือ Google Drive · วันจับสลากลำดับการแสดงรอประกาศเพิ่มเติม',
+        note: 'ส่งเฉพาะลิงก์ YouTube หรือ Google Drive · จับฉลากวันที่ 14 ธันวาคม 2569 (จะแจ้งเวลาและสถานที่ใน LINE OpenChat)',
       },
     ],
     dateGroup: 'dec18_live',

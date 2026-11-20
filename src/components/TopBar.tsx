@@ -1,4 +1,5 @@
 import React from 'react';
+import { Lock } from 'lucide-react';
 
 interface TopBarProps {
   onRegisterClick: () => void;
@@ -6,8 +7,8 @@ interface TopBarProps {
 
 export const TopBar: React.FC<TopBarProps> = ({ onRegisterClick }) => {
   return (
-    <header className="no-print sticky top-0 z-40 border-b border-white/10 bg-[#07080A]/85 backdrop-blur-xl">
-      <div className="mx-auto flex max-w-[1240px] items-center justify-between gap-8 px-6 py-4">
+    <header className="no-print sticky top-0 z-40 border-b border-white/10 bg-[#0B0D0F]/95 backdrop-blur-md">
+      <div className="mx-auto flex max-w-[1200px] items-center justify-between gap-8 px-6 py-4">
         <a
           href="#top"
           className="font-display text-2xl font-extrabold tracking-tight text-white whitespace-nowrap shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#E10600]"
@@ -17,7 +18,7 @@ export const TopBar: React.FC<TopBarProps> = ({ onRegisterClick }) => {
 
         <nav
           aria-label="เมนูหลัก"
-          className="hidden md:flex items-center gap-8 text-xs font-medium tracking-wide text-neutral-300"
+          className="hidden md:flex items-center gap-6 text-sm font-medium text-neutral-300"
         >
           <a
             href="#competitions"
@@ -29,27 +30,35 @@ export const TopBar: React.FC<TopBarProps> = ({ onRegisterClick }) => {
             href="#calendar"
             className="whitespace-nowrap shrink-0 transition-colors duration-150 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#E10600]"
           >
-            ตารางแข่ง
+            กำหนดการ
           </a>
-          <a
-            href="#register"
-            className="whitespace-nowrap shrink-0 transition-colors duration-150 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#E10600]"
+          <button
+            type="button"
+            disabled
+            aria-disabled="true"
+            title="ยังไม่เปิดให้เข้าใช้งาน — รอประกาศผลหลังการแข่งขัน"
+            className="inline-flex items-center gap-1.5 whitespace-nowrap shrink-0 text-neutral-500 cursor-not-allowed"
           >
-            ลงทะเบียน
-          </a>
-          <a
-            href="#grid"
-            className="whitespace-nowrap shrink-0 transition-colors duration-150 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#E10600]"
+            <Lock className="h-3.5 w-3.5" />
+            ประกาศผล
+          </button>
+          <button
+            type="button"
+            disabled
+            aria-disabled="true"
+            title="ยังไม่เปิดให้เข้าใช้งาน — รอรับเกียรติบัตรหลังการแข่งขัน"
+            className="inline-flex items-center gap-1.5 whitespace-nowrap shrink-0 text-neutral-500 cursor-not-allowed"
           >
-            รายชื่อผู้สมัคร
-          </a>
+            <Lock className="h-3.5 w-3.5" />
+            เกียรติบัตร
+          </button>
         </nav>
 
         <div className="shrink-0">
           <button
             type="button"
             onClick={onRegisterClick}
-            className="whitespace-nowrap shrink-0 bg-white px-5 py-2 text-xs font-bold tracking-wide text-[#07080A] transition-colors duration-150 hover:bg-[#E10600] hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white cursor-pointer"
+            className="whitespace-nowrap shrink-0 rounded-md bg-[#E10600] px-4 py-2 text-sm font-semibold text-white transition-colors duration-150 hover:bg-[#B80500] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white cursor-pointer"
           >
             สมัครแข่งขัน
           </button>

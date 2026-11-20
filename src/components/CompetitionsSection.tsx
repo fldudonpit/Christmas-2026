@@ -1,18 +1,16 @@
 import React, { useMemo, useState } from 'react';
-import { ExternalLink, Mail, MapPin, X } from 'lucide-react';
+import { Calendar, ExternalLink, Mail, MapPin, Users, X } from 'lucide-react';
 import { COMPETITIONS } from '../data/competitions';
 import { Competition, CompetitionId } from '../types/competition';
 
 interface CompetitionsSectionProps {
-  registrations: Array<{ competitionId: CompetitionId }>;
   selectedCompetitionId: CompetitionId;
   onSelectForRegister: (id: CompetitionId) => void;
 }
 
-type FilterMode = 'all' | 'split' | 'open' | 'submit' | 'onsite';
+type FilterMode = 'all' | 'split' | 'open';
 
 export const CompetitionsSection: React.FC<CompetitionsSectionProps> = ({
-  registrations,
   selectedCompetitionId,
   onSelectForRegister,
 }) => {
@@ -25,52 +23,29 @@ export const CompetitionsSection: React.FC<CompetitionsSectionProps> = ({
         return COMPETITIONS.filter((c) => c.divisionMode === 'split');
       case 'open':
         return COMPETITIONS.filter((c) => c.divisionMode === 'open');
-      case 'submit':
-        return COMPETITIONS.filter(
-          (c) =>
-            c.channel === 'online_email' ||
-            c.channel === 'onsite_artwork' ||
-            c.channel === 'hybrid_stage'
-        );
-      case 'onsite':
-        return COMPETITIONS.filter(
-          (c) => c.channel === 'onsite_live' || c.channel === 'hybrid_stage'
-        );
       default:
         return COMPETITIONS;
     }
   }, [filter]);
 
-  const countByCompetition = useMemo(() => {
-    const map: Record<string, number> = {};
-    for (const entry of registrations) {
-      map[entry.competitionId] = (map[entry.competitionId] ?? 0) + 1;
-    }
-    return map;
-  }, [registrations]);
-
-  const getAccentBorderClass = (isSelected: boolean) =>
-    isSelected ? 'border-[#E10600]' : 'border-white/10 hover:border-white/25';
-
   return (
-    <section id="competitions" className="border-b border-white/10 bg-[#0B0D0F] py-16">
+    <section id="competitions" className="border-b border-white/10 bg-[#0B0D0F] py-14">
       <div className="mx-auto max-w-[1200px] px-6">
-        <div className="flex flex-col justify-between gap-6 border-b border-white/10 pb-8 lg:flex-row lg:items-end">
+        <div className="flex flex-col justify-between gap-6 border-b border-white/10 pb-6 lg:flex-row lg:items-end">
           <div className="space-y-2">
             <p className="text-sm font-medium text-[#D4AF37]">
-              Official Grand Prix Rulebook &amp; Categories
+              1. เลือกดูรายการแข่งขันที่สนใจ
             </p>
             <h2 className="font-display text-4xl font-bold tracking-tight text-white [text-wrap:balance]">
-              รายการแข่งขันทั้งหมด 6 กิจกรรม
+              กิจกรรมทั้งหมด 6 รายการ
             </h2>
-            <p className="max-w-[64ch] text-sm leading-relaxed text-neutral-400">
-              Singing Contest, Christmas Card, Speech และ English Quiz แข่งแยก ม.ต้น (M.1–M.3) และ ม.ปลาย (M.4–M.6)
-              ส่วน Drawing &amp; Painting และ Cover Dance แข่งขันรวมทุกระดับชั้น (Combined Levels) —{' '}
+            <p className="max-w-[62ch] text-sm leading-relaxed text-neutral-400">
+              4 รายการแยก ม.ต้น / ม.ปลาย · 2 รายการรวมทุกระดับชั้น (Drawing &amp; Painting และ Cover Dance) —{' '}
               <span className="font-semibold text-[#D4AF37]">ชิงเกียรติบัตร และของรางวัลสุดพิเศษ</span>
             </p>
           </div>
 
-          {/* Interactive Segmented Filter Controls */}
+          {/* Simple 3-tab filter */}
           <div
             role="tablist"
             aria-label="กรองรายการแข่งขัน"
@@ -78,10 +53,8 @@ export const CompetitionsSection: React.FC<CompetitionsSectionProps> = ({
           >
             {[
               { key: 'all', label: 'ทั้งหมด (6)' },
-              { key: 'split', label: 'แยก ม.ต้น-ม.ปลาย (4)' },
+              { key: 'split', label: 'แยก ม.ต้น / ม.ปลาย (4)' },
               { key: 'open', label: 'รวมทุกระดับ (2)' },
-              { key: 'submit', label: 'ส่งคลิป / ชิ้นงาน (4)' },
-              { key: 'onsite', label: 'แข่งสดที่โรงเรียน (3)' },
             ].map((item) => (
               <button
                 key={item.key}
@@ -89,7 +62,7 @@ export const CompetitionsSection: React.FC<CompetitionsSectionProps> = ({
                 role="tab"
                 aria-selected={filter === item.key}
                 onClick={() => setFilter(item.key as FilterMode)}
-                className={`whitespace-nowrap shrink-0 rounded-md px-3 py-1.5 text-xs font-medium transition-colors duration-150 cursor-pointer ${
+                className={`whitespace-nowrap shrink-0 rounded-md px-3.5 py-1.5 text-xs font-medium transition-colors duration-150 cursor-pointer ${
                   filter === item.key
                     ? 'bg-[#E10600] text-white'
                     : 'text-neutral-300 hover:bg-white/5 hover:text-white'
@@ -101,85 +74,69 @@ export const CompetitionsSection: React.FC<CompetitionsSectionProps> = ({
           </div>
         </div>
 
-        {/* 6-Event Grid */}
-        <div className="mt-8 grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
+        {/* Clean, Scannable 6-Event Cards */}
+        <div className="mt-8 grid grid-cols-1 gap-5 md:grid-cols-2 lg:grid-cols-3">
           {filteredCompetitions.map((comp) => {
             const isSelected = comp.id === selectedCompetitionId;
-            const entrantCount = countByCompetition[comp.id] ?? 0;
 
             return (
               <article
                 key={comp.id}
-                className={`flex flex-col justify-between rounded-xl border bg-[#12151A] p-6 transition-colors duration-150 ${getAccentBorderClass(
+                className={`flex flex-col justify-between rounded-xl border bg-[#12151A] p-6 transition-colors duration-150 ${
                   isSelected
-                )}`}
+                    ? 'border-[#E10600]'
+                    : 'border-white/10 hover:border-white/25'
+                }`}
               >
                 <div>
                   <div className="flex items-baseline justify-between gap-4">
                     <span className="font-mono text-xs font-semibold text-[#D4AF37] tabular-nums">
-                      {comp.code}.
+                      กิจกรรมที่ {comp.index}
                     </span>
-                    <span className="font-mono text-xs text-neutral-400 tabular-nums">
-                      ผู้สมัคร {entrantCount} รายการ
+                    <span className="text-xs text-neutral-400">
+                      {comp.id === 'cover-dance' ? 'ประเภททีม' : 'ประเภทเดี่ยว'}
                     </span>
                   </div>
 
                   <h3 className="mt-2 font-display text-3xl font-bold tracking-tight text-white">
                     {comp.title}
                   </h3>
-                  <p className="mt-0.5 text-sm font-medium text-neutral-300">
-                    {comp.thaiSubtitle}
-                  </p>
+                  <p className="text-sm text-neutral-300">{comp.thaiSubtitle}</p>
 
-                  {/* Clean Unboxed Metadata */}
-                  <div className="mt-3 flex flex-wrap items-center gap-x-2 gap-y-1 border-t border-white/10 pt-3 text-xs text-neutral-300">
-                    <span
-                      className={
-                        comp.divisionMode === 'open'
-                          ? 'font-semibold text-[#D4AF37]'
-                          : 'font-medium text-emerald-400'
-                      }
-                    >
-                      {comp.divisionLabel}
-                    </span>
-                    <span aria-hidden="true" className="text-neutral-600">
-                      ·
-                    </span>
-                    <span className="font-mono tabular-nums text-white">{comp.dateLabel}</span>
-                  </div>
-
-                  <p className="mt-3 text-sm leading-relaxed text-neutral-400">{comp.summary}</p>
-
-                  {/* Theme / Topic Preview */}
-                  <div className="mt-4 rounded-lg border border-white/10 bg-[#0B0D0F] p-3.5 text-xs">
-                    <p className="font-semibold text-neutral-300">หัวข้อการแข่งขัน (Theme / Topic)</p>
-                    {typeof comp.themeTopic === 'string' ? (
-                      <p className="mt-1 text-white">{comp.themeTopic}</p>
-                    ) : (
-                      <div className="mt-1.5 space-y-1 text-neutral-200">
-                        <p>
-                          <span className="text-emerald-400">ม.ต้น:</span> {comp.themeTopic.junior}
-                        </p>
-                        <p>
-                          <span className="text-[#D4AF37]">ม.ปลาย:</span> {comp.themeTopic.senior}
-                        </p>
+                  {/* 3 Easy-to-Read Facts */}
+                  <dl className="mt-5 space-y-2.5 border-t border-white/10 pt-4 text-xs">
+                    <div className="flex items-start gap-2.5">
+                      <Users className="mt-0.5 h-3.5 w-3.5 shrink-0 text-neutral-400" />
+                      <div>
+                        <dt className="sr-only">ระดับชั้นที่เปิดรับ</dt>
+                        <dd
+                          className={
+                            comp.divisionMode === 'open'
+                              ? 'font-semibold text-[#D4AF37]'
+                              : 'font-medium text-emerald-400'
+                          }
+                        >
+                          {comp.divisionLabel}
+                        </dd>
                       </div>
-                    )}
-                  </div>
+                    </div>
 
-                  {/* Venue & Contact Preview */}
-                  <div className="mt-3 space-y-1.5 text-xs text-neutral-300">
-                    {comp.contacts.map((c, idx) => (
-                      <div key={idx} className="leading-relaxed">
-                        <span className="font-medium text-white">{c.level}:</span>{' '}
-                        {c.room && <span>{c.room}</span>}
-                        {c.teacher && <span> · {c.teacher}</span>}
-                        {c.email && (
-                          <span className="font-mono text-[#D4AF37]"> {c.email}</span>
-                        )}
+                    <div className="flex items-start gap-2.5">
+                      <MapPin className="mt-0.5 h-3.5 w-3.5 shrink-0 text-neutral-400" />
+                      <div>
+                        <dt className="sr-only">สถานที่ / ช่องทางส่ง</dt>
+                        <dd className="text-neutral-200">{comp.venueOrType}</dd>
                       </div>
-                    ))}
-                  </div>
+                    </div>
+
+                    <div className="flex items-start gap-2.5">
+                      <Calendar className="mt-0.5 h-3.5 w-3.5 shrink-0 text-neutral-400" />
+                      <div>
+                        <dt className="sr-only">กำหนดการ</dt>
+                        <dd className="font-mono text-white tabular-nums">{comp.dateLabel}</dd>
+                      </div>
+                    </div>
+                  </dl>
                 </div>
 
                 <div className="mt-6 flex items-center justify-between gap-3 border-t border-white/10 pt-4">
@@ -188,7 +145,7 @@ export const CompetitionsSection: React.FC<CompetitionsSectionProps> = ({
                     onClick={() => setDetailCompetition(comp)}
                     className="whitespace-nowrap shrink-0 text-xs font-semibold text-neutral-200 underline decoration-white/30 underline-offset-4 transition-colors hover:text-white hover:decoration-white cursor-pointer"
                   >
-                    ระเบียบการและเกณฑ์คะแนน
+                    อ่านกติกา &amp; เกณฑ์คะแนน
                   </button>
 
                   <button
@@ -254,11 +211,11 @@ export const CompetitionsSection: React.FC<CompetitionsSectionProps> = ({
                   ) : (
                     <div className="mt-1.5 space-y-1 text-xs text-neutral-200">
                       <p>
-                        <span className="font-semibold text-emerald-400">Lower Secondary:</span>{' '}
+                        <span className="font-semibold text-emerald-400">ม.ต้น:</span>{' '}
                         {detailCompetition.themeTopic.junior}
                       </p>
                       <p>
-                        <span className="font-semibold text-[#D4AF37]">Upper Secondary:</span>{' '}
+                        <span className="font-semibold text-[#D4AF37]">ม.ปลาย:</span>{' '}
                         {detailCompetition.themeTopic.senior}
                       </p>
                     </div>
@@ -314,42 +271,44 @@ export const CompetitionsSection: React.FC<CompetitionsSectionProps> = ({
               )}
 
               {/* Judging Criteria */}
-              <div>
-                <div className="flex items-baseline justify-between">
-                  <h4 className="text-sm font-semibold text-white">
-                    เกณฑ์การตัดสิน (Judging Criteria)
-                  </h4>
-                  {detailCompetition.totalPoints && (
-                    <span className="font-mono text-xs font-semibold text-[#D4AF37] tabular-nums">
-                      Total {detailCompetition.totalPoints} Points
-                    </span>
-                  )}
-                </div>
+              {detailCompetition.judgingCriteria.length > 0 && (
+                <div>
+                  <div className="flex items-baseline justify-between">
+                    <h4 className="text-sm font-semibold text-white">
+                      เกณฑ์การตัดสิน (Judging Criteria)
+                    </h4>
+                    {detailCompetition.totalPoints && (
+                      <span className="font-mono text-xs font-semibold text-[#D4AF37] tabular-nums">
+                        รวม {detailCompetition.totalPoints} คะแนน
+                      </span>
+                    )}
+                  </div>
 
-                <div className="mt-3 divide-y divide-white/10 rounded-lg border border-white/10 bg-[#0B0D0F]">
-                  {detailCompetition.judgingCriteria.map((crit, idx) => (
-                    <div
-                      key={idx}
-                      className="flex items-start justify-between gap-4 px-4 py-3 text-xs"
-                    >
-                      <div>
-                        <p className="font-semibold text-white">{crit.label}</p>
-                        {crit.description && (
-                          <p className="mt-0.5 text-neutral-400">{crit.description}</p>
+                  <div className="mt-3 divide-y divide-white/10 rounded-lg border border-white/10 bg-[#0B0D0F]">
+                    {detailCompetition.judgingCriteria.map((crit, idx) => (
+                      <div
+                        key={idx}
+                        className="flex items-start justify-between gap-4 px-4 py-3 text-xs"
+                      >
+                        <div>
+                          <p className="font-semibold text-white">{crit.label}</p>
+                          {crit.description && (
+                            <p className="mt-0.5 text-neutral-400">{crit.description}</p>
+                          )}
+                        </div>
+                        {crit.points !== undefined && (
+                          <span className="font-mono font-semibold text-[#D4AF37] tabular-nums whitespace-nowrap shrink-0">
+                            {crit.points} คะแนน
+                          </span>
                         )}
                       </div>
-                      {crit.points !== undefined && (
-                        <span className="font-mono font-semibold text-[#D4AF37] tabular-nums whitespace-nowrap shrink-0">
-                          {crit.points} คะแนน
-                        </span>
-                      )}
-                    </div>
-                  ))}
+                    ))}
+                  </div>
+                  {detailCompetition.judgingNote && (
+                    <p className="mt-2 text-xs text-neutral-400">{detailCompetition.judgingNote}</p>
+                  )}
                 </div>
-                {detailCompetition.judgingNote && (
-                  <p className="mt-2 text-xs text-neutral-400">{detailCompetition.judgingNote}</p>
-                )}
-              </div>
+              )}
 
               {/* Contacts, Submission Rooms, Emails, LINE OpenChat */}
               <div>
