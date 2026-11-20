@@ -8,6 +8,7 @@
 5. **Temporal Integrity & Immutability**: `createdAt == request.time` on creation and immutable on updates.
 6. **Admin Privilege Protection**: Only bootstrapped admins (`fldudonpit@gmail.com` with `email_verified == true` or UID `csyH359tc1QBUyu3cAzsfS0sIvE2`) can create or remove `/admins/{adminUid}` entries. Regular users cannot self-assign admin roles.
 7. **Size & Type Bounds**: Every string, ID (`^[a-zA-Z0-9_\-]+$`, max 128), and array (`teamMembersList.size() <= 10`) is strictly bounded.
+8. **Public Results PII Isolation**: `/results/{resultId}` stores only public announcement fields (`studentName`, `englishFullName`, `gradeLevel`, `classroom`, `teamName`, `teamMembersList`, `awardStatus`) and strictly forbids `contactInfo` or `studentId`. Only admins can create, update, or delete `/results` records.
 
 ## 2. The "Dirty Dozen" Adversarial Payloads
 1. **Non-Admin Registration Read Attempt**: Unauthenticated user or signed-in non-admin calls `get` or `list` on `/registrations` -> `PERMISSION_DENIED`.

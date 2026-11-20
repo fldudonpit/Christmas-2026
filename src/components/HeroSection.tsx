@@ -227,23 +227,20 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
               </div>
             </a>
 
-            {/* Locked Menu 1: ประกาศผล */}
-            <button
-              type="button"
-              disabled
-              aria-disabled="true"
-              title="ยังไม่เปิดให้เข้าใช้งาน — ยังไม่ได้ทำการแข่งขัน"
-              className="flex flex-col justify-between rounded-xl border border-white/5 bg-[#101216] p-4 text-left opacity-60 cursor-not-allowed"
+            {/* Step 4: ประกาศผลการแข่งขัน */}
+            <a
+              href="#results"
+              className="flex flex-col justify-between rounded-xl border border-[#D4AF37]/40 bg-[#12151A] p-4 transition-colors hover:border-[#D4AF37]"
             >
-              <div className="flex items-center justify-between text-xs text-neutral-400">
-                <span>ยังไม่เปิดใช้งาน</span>
-                <Lock className="h-4 w-4" />
+              <div className="flex items-center justify-between text-xs text-[#D4AF37]">
+                <span>โหมดประกาศผล</span>
+                <Trophy className="h-4 w-4" />
               </div>
               <div className="mt-3">
-                <p className="text-sm font-semibold text-neutral-300">ประกาศผลการแข่งขัน</p>
-                <p className="mt-1 text-xs text-neutral-500">รอหลังการแข่งขัน 18 ธ.ค. 69</p>
+                <p className="text-sm font-semibold text-white">ประกาศผลการแข่งขัน</p>
+                <p className="mt-1 text-xs text-neutral-300">ดูอันดับรางวัลทั้ง 6 กิจกรรม</p>
               </div>
-            </button>
+            </a>
 
             {/* Locked Menu 2: เกียรติบัตร */}
             <button

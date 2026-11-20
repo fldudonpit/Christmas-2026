@@ -59,6 +59,16 @@ service cloud.firestore {
       return grade in ['ม.1', 'ม.2', 'ม.3', 'ม.4', 'ม.5', 'ม.6'];
     }
 
+    function isValidAwardStatus(status) {
+      return status in [
+        'winner_1',
+        'runner_up_1',
+        'runner_up_2',
+        'participant',
+        'absent'
+      ];
+    }
+
     function isValidTeamMembersList(listVal) {
       return listVal is list
         && listVal.size() <= 10
@@ -119,6 +129,45 @@ service cloud.firestore {
         && data.updatedAt is timestamp;
     }
 
+    function isValidResult(data) {
+      return data.keys().hasAll([
+          'registrationId',
+          'competitionId',
+          'division',
+          'studentName',
+          'gradeLevel',
+          'classroom',
+          'awardStatus',
+          'updatedAt'
+        ])
+        && data.keys().hasOnly([
+          'registrationId',
+          'competitionId',
+          'division',
+          'studentName',
+          'englishFullName',
+          'gradeLevel',
+          'classroom',
+          'teamName',
+          'teamMembersList',
+          'teamMembers',
+          'awardStatus',
+          'updatedAt'
+        ])
+        && isValidId(data.registrationId)
+        && isValidCompetitionId(data.competitionId)
+        && isValidDivisionForCompetition(data.competitionId, data.division)
+        && data.studentName is string && data.studentName.size() >= 2 && data.studentName.size() <= 150
+        && (!('englishFullName' in data) || (data.englishFullName is string && data.englishFullName.size() <= 150))
+        && isValidGrade(data.gradeLevel)
+        && data.classroom is string && data.classroom.size() >= 1 && data.classroom.size() <= 20
+        && (!('teamName' in data) || (data.teamName is string && data.teamName.size() <= 100))
+        && (!('teamMembersList' in data) || isValidTeamMembersList(data.teamMembersList))
+        && (!('teamMembers' in data) || (data.teamMembers is string && data.teamMembers.size() <= 2000))
+        && isValidAwardStatus(data.awardStatus)
+        && data.updatedAt is timestamp;
+    }
+
     function isValidAdminUser(data) {
       return data.keys().hasAll(['email', 'addedByUid', 'createdAt'])
         && data.keys().hasOnly(['email', 'addedByUid', 'createdAt'])
@@ -141,6 +190,24 @@ service cloud.firestore {
         && incoming().createdAt == existing().createdAt
         && incoming().updatedAt == request.time;
       allow delete: if isAdmin() && isValidId(registrationId);
+    }
+
+    // Public Competition Results (PII-free): readable by everyone, writable strictly by Admin
+    match /results/{resultId} {
+      allow get: if isValidId(resultId);
+      allow list: if true;
+      allow create: if isAdmin()
+        && isValidId(resultId)
+        && isValidResult(incoming())
+        && incoming().registrationId == resultId
+        && incoming().updatedAt == request.time;
+      allow update: if isAdmin()
+        && isValidId(resultId)
+        && isValidResult(incoming())
+        && incoming().registrationId == existing().registrationId
+        && incoming().registrationId == resultId
+        && incoming().updatedAt == request.time;
+      allow delete: if isAdmin() && isValidId(resultId);
     }
 
     // Legacy public_entries locked down to Admin-only read/delete

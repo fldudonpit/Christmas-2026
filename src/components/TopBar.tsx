@@ -32,16 +32,12 @@ export const TopBar: React.FC<TopBarProps> = ({ onRegisterClick }) => {
           >
             กำหนดการ
           </a>
-          <button
-            type="button"
-            disabled
-            aria-disabled="true"
-            title="ยังไม่เปิดให้เข้าใช้งาน — รอประกาศผลหลังการแข่งขัน"
-            className="inline-flex items-center gap-1.5 whitespace-nowrap shrink-0 text-neutral-500 cursor-not-allowed"
+          <a
+            href="#results"
+            className="whitespace-nowrap shrink-0 transition-colors duration-150 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#E10600]"
           >
-            <Lock className="h-3.5 w-3.5" />
             ประกาศผล
-          </button>
+          </a>
           <button
             type="button"
             disabled

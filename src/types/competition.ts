@@ -60,6 +60,29 @@ export interface TeamMember {
   gradeClass: string;
 }
 
+export type AwardStatus =
+  | 'winner_1'
+  | 'runner_up_1'
+  | 'runner_up_2'
+  | 'participant'
+  | 'absent';
+
+export interface CompetitionResult {
+  id: string;
+  registrationId: string;
+  competitionId: CompetitionId;
+  division: DivisionType;
+  studentName: string;
+  englishFullName?: string;
+  gradeLevel: string;
+  classroom: string;
+  teamName?: string;
+  teamMembersList?: TeamMember[];
+  teamMembers?: string;
+  awardStatus: AwardStatus;
+  updatedAt: string;
+}
+
 export interface RegistrationEntry {
   id: string;
   raceNumber: string;

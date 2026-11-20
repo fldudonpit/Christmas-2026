@@ -15,6 +15,7 @@ import { HeroSection } from './components/HeroSection';
 import { RaceCalendarSection } from './components/RaceCalendarSection';
 import { RegisteredGridSection } from './components/RegisteredGridSection';
 import { RegistrationSection } from './components/RegistrationSection';
+import { ResultsSection } from './components/ResultsSection';
 import { TopBar } from './components/TopBar';
 import {
   ADMIN_EMAIL,
@@ -26,7 +27,12 @@ import {
   signInAdminWithCredentials,
   signOutUser,
 } from './firebase';
-import { CompetitionId, RegistrationEntry } from './types/competition';
+import {
+  AwardStatus,
+  CompetitionId,
+  CompetitionResult,
+  RegistrationEntry,
+} from './types/competition';
 
 function timestampToIso(value: unknown): string {
   if (value instanceof Timestamp) {
@@ -51,6 +57,7 @@ export default function App() {
   const [authReady, setAuthReady] = useState(false);
   const [showAdminModal, setShowAdminModal] = useState(false);
   const [privateRegistrations, setPrivateRegistrations] = useState<RegistrationEntry[]>([]);
+  const [results, setResults] = useState<CompetitionResult[]>([]);
 
   const isAdmin = Boolean(
     user &&
@@ -63,6 +70,42 @@ export default function App() {
       setUser(nextUser);
       setAuthReady(true);
     });
+    return () => unsubscribe();
+  }, []);
+
+  // Real-time listener for public PII-free competition results
+  useEffect(() => {
+    const unsubscribe = onSnapshot(
+      collection(db, 'results'),
+      (snapshot) => {
+        const nextResults: CompetitionResult[] = snapshot.docs.map((docSnap) => {
+          const data = docSnap.data();
+          return {
+            id: docSnap.id,
+            registrationId: String(data.registrationId ?? docSnap.id),
+            competitionId: data.competitionId as CompetitionId,
+            division: data.division,
+            studentName: String(data.studentName ?? ''),
+            englishFullName:
+              typeof data.englishFullName === 'string' ? data.englishFullName : undefined,
+            gradeLevel: String(data.gradeLevel ?? ''),
+            classroom: String(data.classroom ?? ''),
+            teamName: typeof data.teamName === 'string' ? data.teamName : undefined,
+            teamMembersList: Array.isArray(data.teamMembersList)
+              ? data.teamMembersList
+              : undefined,
+            teamMembers: typeof data.teamMembers === 'string' ? data.teamMembers : undefined,
+            awardStatus: data.awardStatus as AwardStatus,
+            updatedAt: timestampToIso(data.updatedAt),
+          };
+        });
+        setResults(nextResults);
+      },
+      (error) => {
+        handleFirestoreError(error, OperationType.LIST, 'results');
+      }
+    );
+
     return () => unsubscribe();
   }, []);
 
@@ -192,6 +235,63 @@ export default function App() {
     } catch (error) {
       handleFirestoreError(error, OperationType.DELETE, `registrations/${id}`);
     }
+
+    if (results.some((r) => r.id === id)) {
+      try {
+        await deleteDoc(doc(db, 'results', id));
+      } catch (error) {
+        handleFirestoreError(error, OperationType.DELETE, `results/${id}`);
+      }
+    }
+  };
+
+  const handleSaveResult = async (
+    entry: RegistrationEntry,
+    awardStatus: AwardStatus | ''
+  ) => {
+    const resultRef = doc(db, 'results', entry.id);
+
+    if (!awardStatus) {
+      try {
+        await deleteDoc(resultRef);
+      } catch (error) {
+        handleFirestoreError(error, OperationType.DELETE, `results/${entry.id}`);
+      }
+      return;
+    }
+
+    const resultPayload: Record<string, unknown> = {
+      registrationId: entry.id,
+      competitionId: entry.competitionId,
+      division: entry.division,
+      studentName: entry.studentName.slice(0, 150),
+      gradeLevel: entry.gradeLevel,
+      classroom: entry.classroom.slice(0, 20),
+      awardStatus,
+      updatedAt: serverTimestamp(),
+    };
+
+    if (entry.englishFullName) {
+      resultPayload.englishFullName = entry.englishFullName.slice(0, 150);
+    }
+    if (entry.teamName) {
+      resultPayload.teamName = entry.teamName.slice(0, 100);
+    }
+    if (entry.teamMembersList && entry.teamMembersList.length > 0) {
+      resultPayload.teamMembersList = entry.teamMembersList.slice(0, 10).map((m) => ({
+        name: String(m.name ?? '').slice(0, 120),
+        gradeClass: String(m.gradeClass ?? '').slice(0, 30),
+      }));
+    }
+    if (entry.teamMembers) {
+      resultPayload.teamMembers = entry.teamMembers.slice(0, 2000);
+    }
+
+    try {
+      await setDoc(resultRef, resultPayload);
+    } catch (error) {
+      handleFirestoreError(error, OperationType.WRITE, `results/${entry.id}`);
+    }
   };
 
   return (
@@ -218,15 +318,19 @@ export default function App() {
           onAddRegistration={handleAddRegistration}
         />
 
+        <ResultsSection results={results} />
+
         <RegisteredGridSection
           user={user}
           isAdmin={isAdmin}
           privateRegistrations={privateRegistrations}
+          results={results}
           showAdminModal={showAdminModal}
           onCloseAdminModal={() => setShowAdminModal(false)}
           onAdminSignIn={handleAdminSignIn}
           onSignOut={handleSignOut}
           onDeleteRegistration={handleDeleteRegistration}
+          onSaveResult={handleSaveResult}
         />
       </main>
 

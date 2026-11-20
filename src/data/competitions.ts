@@ -350,3 +350,51 @@ export const COMPETITIONS: Competition[] = [
 export const JUNIOR_GRADES = ['ม.1', 'ม.2', 'ม.3'];
 export const SENIOR_GRADES = ['ม.4', 'ม.5', 'ม.6'];
 export const ALL_GRADES = [...JUNIOR_GRADES, ...SENIOR_GRADES];
+
+export interface AwardOptionMeta {
+  value: 'winner_1' | 'runner_up_1' | 'runner_up_2' | 'participant' | 'absent';
+  label: string;
+  rank: number;
+  shortRank: string;
+}
+
+export const AWARD_OPTIONS: readonly AwardOptionMeta[] = [
+  {
+    value: 'winner_1',
+    label: 'ชนะเลิศอันดับ 1',
+    rank: 1,
+    shortRank: '01',
+  },
+  {
+    value: 'runner_up_1',
+    label: 'รองชนะเลิศอันดับ 1',
+    rank: 2,
+    shortRank: '02',
+  },
+  {
+    value: 'runner_up_2',
+    label: 'รองชนะเลิศอันดับ 2',
+    rank: 3,
+    shortRank: '03',
+  },
+  {
+    value: 'participant',
+    label: 'เข้าร่วมการแข่งขัน',
+    rank: 4,
+    shortRank: '04',
+  },
+  {
+    value: 'absent',
+    label: 'ไม่เข้าร่วมการแข่งขัน',
+    rank: 5,
+    shortRank: '05',
+  },
+] as const;
+
+export function getAwardOption(status?: string): AwardOptionMeta | undefined {
+  return AWARD_OPTIONS.find((opt) => opt.value === status);
+}
+
+export function getAwardRank(status?: string): number {
+  return getAwardOption(status)?.rank ?? 99;
+}

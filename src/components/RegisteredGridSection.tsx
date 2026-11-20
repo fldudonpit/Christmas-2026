@@ -1,10 +1,12 @@
 import React, { useMemo, useState } from 'react';
 import type { User } from 'firebase/auth';
 import { Check, Copy, Download, LogIn, LogOut, ShieldCheck, X } from 'lucide-react';
-import { COMPETITIONS } from '../data/competitions';
+import { AWARD_OPTIONS, COMPETITIONS, getAwardOption } from '../data/competitions';
 import { ADMIN_DOMAIN } from '../firebase';
 import {
+  AwardStatus,
   CompetitionId,
+  CompetitionResult,
   DivisionType,
   RegistrationEntry,
 } from '../types/competition';
@@ -13,38 +15,63 @@ interface RegisteredGridSectionProps {
   user: User | null;
   isAdmin: boolean;
   privateRegistrations: RegistrationEntry[];
+  results: CompetitionResult[];
   showAdminModal: boolean;
   onCloseAdminModal: () => void;
   onAdminSignIn: (username: string, password: string) => Promise<void>;
   onSignOut: () => Promise<void>;
   onDeleteRegistration: (id: string) => Promise<void>;
+  onSaveResult: (entry: RegistrationEntry, awardStatus: AwardStatus | '') => Promise<void>;
 }
 
 export const RegisteredGridSection: React.FC<RegisteredGridSectionProps> = ({
   user,
   isAdmin,
   privateRegistrations,
+  results,
   showAdminModal,
   onCloseAdminModal,
   onAdminSignIn,
   onSignOut,
   onDeleteRegistration,
+  onSaveResult,
 }) => {
   const [search, setSearch] = useState('');
   const [compFilter, setCompFilter] = useState<CompetitionId | 'all'>('all');
   const [divisionFilter, setDivisionFilter] = useState<DivisionType | 'all'>('all');
+  const [awardFilter, setAwardFilter] = useState<AwardStatus | 'all' | 'unassigned'>('all');
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [adminError, setAdminError] = useState('');
   const [isLoggingIn, setIsLoggingIn] = useState(false);
   const [copiedUid, setCopiedUid] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [savingResultId, setSavingResultId] = useState<string | null>(null);
+  const [savedResultId, setSavedResultId] = useState<string | null>(null);
+  const [resultError, setResultError] = useState('');
+
+  const resultMap = useMemo(() => {
+    const map = new Map<string, CompetitionResult>();
+    for (const r of results) {
+      map.set(r.registrationId || r.id, r);
+    }
+    return map;
+  }, [results]);
 
   const filteredAdmin = useMemo(() => {
     const q = search.trim().toLowerCase();
     return privateRegistrations.filter((item) => {
       if (compFilter !== 'all' && item.competitionId !== compFilter) return false;
       if (divisionFilter !== 'all' && item.division !== divisionFilter) return false;
+      const assignedStatus = resultMap.get(item.id)?.awardStatus;
+      if (awardFilter === 'unassigned' && assignedStatus) return false;
+      if (
+        awardFilter !== 'all' &&
+        awardFilter !== 'unassigned' &&
+        assignedStatus !== awardFilter
+      ) {
+        return false;
+      }
       if (!q) return true;
       return (
         item.studentName.toLowerCase().includes(q) ||
@@ -55,7 +82,7 @@ export const RegisteredGridSection: React.FC<RegisteredGridSectionProps> = ({
         (item.teamMembers && item.teamMembers.toLowerCase().includes(q))
       );
     });
-  }, [privateRegistrations, compFilter, divisionFilter, search]);
+  }, [privateRegistrations, compFilter, divisionFilter, awardFilter, search, resultMap]);
 
   const adminDisplayUsername = useMemo(() => {
     if (!user?.email) return 'Admin';
@@ -120,12 +147,34 @@ export const RegisteredGridSection: React.FC<RegisteredGridSectionProps> = ({
     }
   };
 
+  const handleResultChange = async (
+    entry: RegistrationEntry,
+    nextStatus: AwardStatus | ''
+  ) => {
+    setResultError('');
+    setSavingResultId(entry.id);
+    try {
+      await onSaveResult(entry, nextStatus);
+      setSavedResultId(entry.id);
+      window.setTimeout(() => {
+        setSavedResultId((prev) => (prev === entry.id ? null : prev));
+      }, 1800);
+    } catch {
+      setResultError(
+        `ไม่สามารถบันทึกผลการแข่งขันของ ${entry.studentName} ได้ กรุณาลองใหม่อีกครั้ง`
+      );
+    } finally {
+      setSavingResultId(null);
+    }
+  };
+
   const handleExportCsv = (rowsToExport: RegistrationEntry[], suffix: string) => {
     if (!isAdmin || rowsToExport.length === 0) return;
     const headers = [
-      'Race Pass',
+      'Reference ID',
       'Competition',
       'Division',
+      'Award / Result',
       'Thai Full Name',
       'English Full Name',
       'Student ID',
@@ -150,10 +199,13 @@ export const RegisteredGridSection: React.FC<RegisteredGridSectionProps> = ({
           : r.division === 'senior'
           ? 'ม.ปลาย'
           : 'Combined Levels';
+      const awardStatus = resultMap.get(r.id)?.awardStatus;
+      const awardLabel = getAwardOption(awardStatus)?.label ?? 'ยังไม่ระบุผล';
       return [
         r.raceNumber,
         compTitle,
         divLabel,
+        awardLabel,
         r.studentName,
         r.englishFullName,
         r.studentId,
@@ -202,14 +254,21 @@ export const RegisteredGridSection: React.FC<RegisteredGridSectionProps> = ({
                   โหมดแอดมิน ({adminDisplayUsername})
                 </p>
                 <h2 className="font-display text-4xl font-bold tracking-tight text-white [text-wrap:balance]">
-                  จัดการข้อมูลผู้สมัครและส่งออก CSV
+                  จัดการผู้สมัคร บันทึกผลการแข่งขัน และส่งออก CSV
                 </h2>
                 <p className="text-sm text-neutral-400">
-                  ส่วนนี้แสดงเฉพาะผู้ดูแลระบบที่เข้าสู่ระบบแล้วเท่านั้น
+                  เลือกอันดับผลการแข่งขันของแต่ละคนเพื่อแสดงผลเรียงอันดับในโหมดประกาศผลโดยอัตโนมัติ
                 </p>
               </div>
 
               <div className="flex flex-wrap items-center gap-2.5">
+                <a
+                  href="#results"
+                  className="inline-flex items-center gap-1.5 whitespace-nowrap shrink-0 rounded-md border border-[#D4AF37]/50 bg-[#D4AF37]/10 px-3.5 py-2 text-xs font-semibold text-[#FDE68A] transition-colors hover:bg-[#D4AF37]/20"
+                >
+                  ดูหน้าประกาศผล
+                </a>
+
                 <button
                   type="button"
                   onClick={() => handleExportCsv(privateRegistrations, 'all')}
@@ -244,7 +303,7 @@ export const RegisteredGridSection: React.FC<RegisteredGridSectionProps> = ({
 
             {/* Admin Search & Filters */}
             <div className="mt-6 grid grid-cols-1 gap-3 md:grid-cols-12">
-              <div className="md:col-span-5">
+              <div className="md:col-span-4">
                 <label htmlFor="admin-search" className="sr-only">
                   ค้นหาผู้สมัคร
                 </label>
@@ -253,12 +312,12 @@ export const RegisteredGridSection: React.FC<RegisteredGridSectionProps> = ({
                   type="search"
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
-                  placeholder="ค้นหาชื่อ, เลขประจำตัว, ชื่อทีม หรือ #UP-..."
+                  placeholder="ค้นหาชื่อ, เลขประจำตัว หรือชื่อทีม..."
                   className="w-full rounded-lg border border-white/15 bg-[#0B0D0F] px-4 py-2.5 text-sm text-white placeholder:text-neutral-500 focus:border-[#E10600] focus:outline-none"
                 />
               </div>
 
-              <div className="md:col-span-4">
+              <div className="md:col-span-3">
                 <label htmlFor="admin-comp-filter" className="sr-only">
                   กรองตามรายการแข่งขัน
                 </label>
@@ -266,7 +325,7 @@ export const RegisteredGridSection: React.FC<RegisteredGridSectionProps> = ({
                   id="admin-comp-filter"
                   value={compFilter}
                   onChange={(e) => setCompFilter(e.target.value as CompetitionId | 'all')}
-                  className="w-full rounded-lg border border-white/15 bg-[#0B0D0F] px-4 py-2.5 text-sm text-white focus:border-[#E10600] focus:outline-none"
+                  className="w-full rounded-lg border border-white/15 bg-[#0B0D0F] px-3.5 py-2.5 text-sm text-white focus:border-[#E10600] focus:outline-none"
                 >
                   <option value="all">ทุกรายการแข่งขัน (6)</option>
                   {COMPETITIONS.map((c) => (
@@ -277,7 +336,7 @@ export const RegisteredGridSection: React.FC<RegisteredGridSectionProps> = ({
                 </select>
               </div>
 
-              <div className="md:col-span-3">
+              <div className="md:col-span-2">
                 <label htmlFor="admin-div-filter" className="sr-only">
                   กรองตามระดับชั้น
                 </label>
@@ -285,15 +344,43 @@ export const RegisteredGridSection: React.FC<RegisteredGridSectionProps> = ({
                   id="admin-div-filter"
                   value={divisionFilter}
                   onChange={(e) => setDivisionFilter(e.target.value as DivisionType | 'all')}
-                  className="w-full rounded-lg border border-white/15 bg-[#0B0D0F] px-4 py-2.5 text-sm text-white focus:border-[#E10600] focus:outline-none"
+                  className="w-full rounded-lg border border-white/15 bg-[#0B0D0F] px-3.5 py-2.5 text-sm text-white focus:border-[#E10600] focus:outline-none"
                 >
-                  <option value="all">ทุกรุ่น (ม.ต้น / ม.ปลาย / รวมทุกระดับ)</option>
+                  <option value="all">ทุกรุ่น</option>
                   <option value="junior">ม.ต้น</option>
                   <option value="senior">ม.ปลาย</option>
-                  <option value="open">รวมทุกระดับ (Drawing &amp; Cover Dance)</option>
+                  <option value="open">รวมทุกระดับ</option>
+                </select>
+              </div>
+
+              <div className="md:col-span-3">
+                <label htmlFor="admin-award-filter" className="sr-only">
+                  กรองตามผลการแข่งขัน
+                </label>
+                <select
+                  id="admin-award-filter"
+                  value={awardFilter}
+                  onChange={(e) =>
+                    setAwardFilter(e.target.value as AwardStatus | 'all' | 'unassigned')
+                  }
+                  className="w-full rounded-lg border border-white/15 bg-[#0B0D0F] px-3.5 py-2.5 text-sm text-white focus:border-[#E10600] focus:outline-none"
+                >
+                  <option value="all">สถานะผลทั้งหมด</option>
+                  <option value="unassigned">ยังไม่ระบุผล</option>
+                  {AWARD_OPTIONS.map((opt) => (
+                    <option key={opt.value} value={opt.value}>
+                      {opt.label}
+                    </option>
+                  ))}
                 </select>
               </div>
             </div>
+
+            {resultError && (
+              <div className="mt-4 rounded-lg border border-[#F87171]/40 bg-[#F87171]/10 px-4 py-3 text-xs text-[#FCA5A5]">
+                {resultError}
+              </div>
+            )}
 
             {privateRegistrations.length === 0 ? (
               <div className="mt-8 rounded-xl border border-white/10 bg-[#12151A] px-6 py-12 text-center">
@@ -310,31 +397,32 @@ export const RegisteredGridSection: React.FC<RegisteredGridSectionProps> = ({
               </div>
             ) : (
               <div className="mt-6 overflow-x-auto rounded-xl border border-white/10 bg-[#12151A]">
-                <table className="w-full min-w-[820px] border-collapse text-left">
+                <table className="w-full min-w-[980px] border-collapse text-left">
                   <thead>
                     <tr className="border-b border-white/10 bg-[#171B22] text-xs font-semibold text-neutral-300">
-                      <th className="px-5 py-3.5 font-mono">Race Pass</th>
-                      <th className="px-5 py-3.5">รายการแข่งขัน</th>
-                      <th className="px-5 py-3.5">รุ่น</th>
-                      <th className="px-5 py-3.5">ผู้สมัคร / ทีม</th>
-                      <th className="px-5 py-3.5">ชั้น / รหัส</th>
-                      <th className="px-5 py-3.5">เบอร์ติดต่อ</th>
-                      <th className="px-5 py-3.5">รายละเอียดผลงาน</th>
-                      <th className="px-5 py-3.5 text-right">จัดการ</th>
+                      <th className="px-4 py-3.5">รายการแข่งขัน</th>
+                      <th className="px-4 py-3.5">รุ่น</th>
+                      <th className="px-4 py-3.5">ผู้สมัคร / ทีม</th>
+                      <th className="px-4 py-3.5">ชั้น / รหัส</th>
+                      <th className="px-4 py-3.5">เบอร์ติดต่อ</th>
+                      <th className="px-4 py-3.5">รายละเอียดผลงาน</th>
+                      <th className="px-4 py-3.5">ผลการแข่งขัน (โหมดประกาศผล)</th>
+                      <th className="px-4 py-3.5 text-right">จัดการ</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-white/10 text-sm">
                     {filteredAdmin.map((entry) => {
                       const comp = COMPETITIONS.find((c) => c.id === entry.competitionId);
+                      const currentAward = resultMap.get(entry.id)?.awardStatus ?? '';
+                      const isSavingThis = savingResultId === entry.id;
+                      const isSavedThis = savedResultId === entry.id;
+
                       return (
                         <tr key={entry.id} className="hover:bg-white/[0.03]">
-                          <td className="px-5 py-4 font-mono text-xs font-semibold text-[#D4AF37] tabular-nums">
-                            {entry.raceNumber}
-                          </td>
-                          <td className="px-5 py-4 font-medium text-white">
+                          <td className="px-4 py-4 font-medium text-white">
                             {comp?.title ?? entry.competitionId}
                           </td>
-                          <td className="px-5 py-4">
+                          <td className="px-4 py-4">
                             <span
                               className={
                                 entry.division === 'open'
@@ -345,7 +433,7 @@ export const RegisteredGridSection: React.FC<RegisteredGridSectionProps> = ({
                               {getDivisionLabel(entry.division)}
                             </span>
                           </td>
-                          <td className="px-5 py-4">
+                          <td className="px-4 py-4">
                             <div className="font-medium text-white">{entry.studentName}</div>
                             {entry.englishFullName && (
                               <div className="text-xs text-neutral-400">{entry.englishFullName}</div>
@@ -364,13 +452,13 @@ export const RegisteredGridSection: React.FC<RegisteredGridSectionProps> = ({
                               </div>
                             )}
                           </td>
-                          <td className="px-5 py-4 font-mono text-xs text-neutral-300 tabular-nums">
+                          <td className="px-4 py-4 font-mono text-xs text-neutral-300 tabular-nums">
                             {entry.gradeLevel}/{entry.classroom} · {entry.studentId}
                           </td>
-                          <td className="px-5 py-4 font-mono text-xs text-neutral-300 tabular-nums">
+                          <td className="px-4 py-4 font-mono text-xs text-neutral-300 tabular-nums">
                             {entry.contactInfo}
                           </td>
-                          <td className="px-5 py-4 text-xs text-neutral-300">
+                          <td className="px-4 py-4 text-xs text-neutral-300">
                             {entry.submissionTitle && <div>{entry.submissionTitle}</div>}
                             {entry.submissionUrl && (
                               <a
@@ -386,7 +474,49 @@ export const RegisteredGridSection: React.FC<RegisteredGridSectionProps> = ({
                               <span className="text-neutral-500">รอส่งผลงานตามกำหนด</span>
                             )}
                           </td>
-                          <td className="px-5 py-4 text-right">
+                          <td className="px-4 py-4">
+                            <div className="space-y-1">
+                              <select
+                                aria-label={`เลือกผลการแข่งขันของ ${entry.studentName}`}
+                                value={currentAward}
+                                disabled={isSavingThis}
+                                onChange={(e) =>
+                                  handleResultChange(
+                                    entry,
+                                    e.target.value as AwardStatus | ''
+                                  )
+                                }
+                                className={`w-48 rounded-md border px-2.5 py-1.5 text-xs font-medium focus:border-[#E10600] focus:outline-none disabled:opacity-50 ${
+                                  currentAward === 'winner_1'
+                                    ? 'border-[#D4AF37] bg-[#D4AF37]/15 text-[#FDE68A]'
+                                    : currentAward === 'runner_up_1' ||
+                                      currentAward === 'runner_up_2'
+                                    ? 'border-white/30 bg-[#171B22] text-white'
+                                    : currentAward === 'participant'
+                                    ? 'border-emerald-500/40 bg-emerald-500/10 text-emerald-300'
+                                    : currentAward === 'absent'
+                                    ? 'border-white/15 bg-[#0B0D0F] text-neutral-400'
+                                    : 'border-white/15 bg-[#0B0D0F] text-neutral-300'
+                                }`}
+                              >
+                                <option value="">-- ยังไม่ระบุผล --</option>
+                                {AWARD_OPTIONS.map((opt) => (
+                                  <option key={opt.value} value={opt.value}>
+                                    {opt.label}
+                                  </option>
+                                ))}
+                              </select>
+                              {isSavingThis && (
+                                <p className="text-[11px] text-neutral-400">กำลังบันทึก...</p>
+                              )}
+                              {!isSavingThis && isSavedThis && (
+                                <p className="text-[11px] text-emerald-400">
+                                  บันทึกแล้ว · แสดงในหน้าประกาศผล
+                                </p>
+                              )}
+                            </div>
+                          </td>
+                          <td className="px-4 py-4 text-right">
                             <button
                               type="button"
                               disabled={deletingId === entry.id}

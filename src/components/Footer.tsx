@@ -50,9 +50,10 @@ export const Footer: React.FC<FooterProps> = ({ isAdmin, onOpenAdmin }) => {
                   สมัครเข้าร่วมการแข่งขัน
                 </a>
               </li>
-              <li className="flex items-center gap-1.5 text-neutral-500">
-                <Lock className="h-3 w-3" />
-                <span>ประกาศผล (ยังไม่เปิดใช้งาน)</span>
+              <li>
+                <a href="#results" className="hover:text-white">
+                  ประกาศผลการแข่งขัน
+                </a>
               </li>
               <li className="flex items-center gap-1.5 text-neutral-500">
                 <Lock className="h-3 w-3" />

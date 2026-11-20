@@ -112,6 +112,99 @@
         "updatedAt"
       ]
     },
+    "CompetitionResult": {
+      "title": "CompetitionResult",
+      "description": "Public competition award announcement record without student PII (phone/studentId), managed strictly by admins.",
+      "type": "object",
+      "properties": {
+        "registrationId": {
+          "type": "string",
+          "description": "Linked registration document ID",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "competitionId": {
+          "type": "string",
+          "description": "Competition identifier",
+          "enum": [
+            "singing-contest",
+            "christmas-card",
+            "speech",
+            "drawing-painting",
+            "english-quiz",
+            "cover-dance"
+          ]
+        },
+        "division": {
+          "type": "string",
+          "description": "Competition level division",
+          "enum": ["junior", "senior", "open"]
+        },
+        "studentName": {
+          "type": "string",
+          "description": "Thai full name of participant",
+          "minLength": 2,
+          "maxLength": 150
+        },
+        "englishFullName": {
+          "type": "string",
+          "description": "Optional English full name",
+          "maxLength": 150
+        },
+        "gradeLevel": {
+          "type": "string",
+          "description": "Grade level",
+          "enum": ["ม.1", "ม.2", "ม.3", "ม.4", "ม.5", "ม.6"]
+        },
+        "classroom": {
+          "type": "string",
+          "description": "Classroom identifier",
+          "minLength": 1,
+          "maxLength": 20
+        },
+        "teamName": {
+          "type": "string",
+          "description": "Cover Dance team name",
+          "maxLength": 100
+        },
+        "teamMembersList": {
+          "type": "array",
+          "description": "Structured list of up to 10 Cover Dance team members"
+        },
+        "teamMembers": {
+          "type": "string",
+          "description": "Formatted string of team members",
+          "maxLength": 2000
+        },
+        "awardStatus": {
+          "type": "string",
+          "description": "Assigned placement or participation status",
+          "enum": [
+            "winner_1",
+            "runner_up_1",
+            "runner_up_2",
+            "participant",
+            "absent"
+          ]
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp when updated"
+        }
+      },
+      "required": [
+        "registrationId",
+        "competitionId",
+        "division",
+        "studentName",
+        "gradeLevel",
+        "classroom",
+        "awardStatus",
+        "updatedAt"
+      ]
+    },
     "AdminUser": {
       "title": "AdminUser",
       "description": "Authorized committee administrator UID record.",
@@ -143,6 +236,10 @@
     "/registrations/{registrationId}": {
       "schema": { "$ref": "#/entities/Registration" },
       "description": "Private full registration documents containing student PII; publicly write-only on creation and strictly readable/updatable/deletable by verified admins."
+    },
+    "/results/{resultId}": {
+      "schema": { "$ref": "#/entities/CompetitionResult" },
+      "description": "Public competition award announcements (no PII) readable by everyone and writable/deletable strictly by admins."
     },
     "/admins/{adminUid}": {
       "schema": { "$ref": "#/entities/AdminUser" },
