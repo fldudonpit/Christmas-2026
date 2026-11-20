@@ -18,11 +18,12 @@ import { RegistrationSection } from './components/RegistrationSection';
 import { TopBar } from './components/TopBar';
 import {
   ADMIN_EMAIL,
+  ADMIN_UIDS,
   OperationType,
   auth,
   db,
   handleFirestoreError,
-  signInWithGoogle,
+  signInAdminWithCredentials,
   signOutUser,
 } from './firebase';
 import { CompetitionId, RegistrationEntry } from './types/competition';
@@ -51,7 +52,11 @@ export default function App() {
   const [showAdminModal, setShowAdminModal] = useState(false);
   const [privateRegistrations, setPrivateRegistrations] = useState<RegistrationEntry[]>([]);
 
-  const isAdmin = Boolean(user?.emailVerified && user.email === ADMIN_EMAIL);
+  const isAdmin = Boolean(
+    user &&
+      ((user.emailVerified && user.email === ADMIN_EMAIL) ||
+        ADMIN_UIDS.includes(user.uid))
+  );
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (nextUser) => {
@@ -120,8 +125,8 @@ export default function App() {
     scrollToRegister();
   };
 
-  const handleGoogleSignIn = async (forceSelectAccount = false) => {
-    await signInWithGoogle(forceSelectAccount);
+  const handleAdminSignIn = async (username: string, password: string) => {
+    await signInAdminWithCredentials(username, password);
   };
 
   const handleSignOut = async () => {
@@ -219,7 +224,7 @@ export default function App() {
           privateRegistrations={privateRegistrations}
           showAdminModal={showAdminModal}
           onCloseAdminModal={() => setShowAdminModal(false)}
-          onGoogleSignIn={handleGoogleSignIn}
+          onAdminSignIn={handleAdminSignIn}
           onSignOut={handleSignOut}
           onDeleteRegistration={handleDeleteRegistration}
         />

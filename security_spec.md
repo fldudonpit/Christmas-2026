@@ -2,11 +2,11 @@
 
 ## 1. Data Invariants
 1. **Write-Only Student Submission with Strict Admin-Only Read**: Students may submit new registrations to `/registrations/{registrationId}` without login, and ALL reads (`get`, `list`), updates, and deletes across registrations are **strictly denied to non-admins**. No public registration list or public count collection is readable by visitors.
-2. **Admin Verification Mandate**: Reading registrations, viewing applicant lists, exporting CSVs, updating registrations, and deleting registrations require a Google-authenticated admin (`request.auth != null && request.auth.token.email_verified == true`) matching `fldudonpit@gmail.com` or an `/admins/{uid}` document (with `allow list` restricted to token-only `isBootstrappedAdmin()` to avoid DB lookup costs).
+2. **Admin Verification Mandate**: Reading registrations, viewing applicant lists, exporting CSVs, updating registrations, and deleting registrations require an authenticated admin matching either the verified department Google account (`request.auth.token.email_verified == true && request.auth.token.email == 'fldudonpit@gmail.com'`), the exact bootstrapped Firebase Console admin UID (`csyH359tc1QBUyu3cAzsfS0sIvE2`), or an `/admins/{uid}` document (with `allow list` restricted to token/UID-only `isBootstrappedAdmin()` to avoid DB lookup costs). Unverified emails are never trusted for admin access.
 3. **Legacy Collection Lockdown**: Any legacy `/public_entries/{entryId}` documents are locked down to admin-only read/delete (`create` and `update` disabled).
 4. **Division Constraint Integrity**: `drawing-painting` and `cover-dance` must always use `division == 'open'`. Split competitions (`singing-contest`, `christmas-card`, `speech`, `english-quiz`) must use `division in ['junior', 'senior']`.
 5. **Temporal Integrity & Immutability**: `createdAt == request.time` on creation and immutable on updates.
-6. **Admin Privilege Protection**: Only the bootstrapped department admin (`fldudonpit@gmail.com` with `email_verified == true`) can create or remove `/admins/{adminUid}` entries. Regular users cannot self-assign admin roles.
+6. **Admin Privilege Protection**: Only bootstrapped admins (`fldudonpit@gmail.com` with `email_verified == true` or UID `csyH359tc1QBUyu3cAzsfS0sIvE2`) can create or remove `/admins/{adminUid}` entries. Regular users cannot self-assign admin roles.
 7. **Size & Type Bounds**: Every string, ID (`^[a-zA-Z0-9_\-]+$`, max 128), and array (`teamMembersList.size() <= 10`) is strictly bounded.
 
 ## 2. The "Dirty Dozen" Adversarial Payloads

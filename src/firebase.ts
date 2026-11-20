@@ -1,28 +1,24 @@
 import { initializeApp } from 'firebase/app';
 import {
-  GoogleAuthProvider,
   getAuth,
-  signInWithPopup,
+  signInWithEmailAndPassword,
   signOut,
 } from 'firebase/auth';
 import { doc, getDocFromServer, getFirestore } from 'firebase/firestore';
 import firebaseConfig from '../firebase-applet-config.json';
 
 export const ADMIN_EMAIL = 'fldudonpit@gmail.com';
+export const ADMIN_DOMAIN = 'udonpit-admin.local';
+export const ADMIN_UIDS: string[] = ['csyH359tc1QBUyu3cAzsfS0sIvE2'];
 
 const app = initializeApp(firebaseConfig);
 export const db = getFirestore(app, firebaseConfig.firestoreDatabaseId);
 export const auth = getAuth(app);
 
-export const googleProvider = new GoogleAuthProvider();
-
-export async function signInWithGoogle(forceSelectAccount = false) {
-  if (forceSelectAccount) {
-    googleProvider.setCustomParameters({ prompt: 'select_account' });
-  } else {
-    googleProvider.setCustomParameters({});
-  }
-  return signInWithPopup(auth, googleProvider);
+export async function signInAdminWithCredentials(username: string, password: string) {
+  const cleanUser = username.trim().toLowerCase();
+  const loginEmail = cleanUser.includes('@') ? cleanUser : `${cleanUser}@${ADMIN_DOMAIN}`;
+  return signInWithEmailAndPassword(auth, loginEmail, password);
 }
 
 export async function signOutUser() {

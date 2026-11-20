@@ -1,8 +1,8 @@
 import React, { useMemo, useState } from 'react';
 import type { User } from 'firebase/auth';
-import { Download, LogIn, LogOut, ShieldCheck, X } from 'lucide-react';
+import { Check, Copy, Download, LogIn, LogOut, ShieldCheck, X } from 'lucide-react';
 import { COMPETITIONS } from '../data/competitions';
-import { ADMIN_EMAIL } from '../firebase';
+import { ADMIN_DOMAIN } from '../firebase';
 import {
   CompetitionId,
   DivisionType,
@@ -15,7 +15,7 @@ interface RegisteredGridSectionProps {
   privateRegistrations: RegistrationEntry[];
   showAdminModal: boolean;
   onCloseAdminModal: () => void;
-  onGoogleSignIn: (forceSelectAccount?: boolean) => Promise<void>;
+  onAdminSignIn: (username: string, password: string) => Promise<void>;
   onSignOut: () => Promise<void>;
   onDeleteRegistration: (id: string) => Promise<void>;
 }
@@ -26,14 +26,18 @@ export const RegisteredGridSection: React.FC<RegisteredGridSectionProps> = ({
   privateRegistrations,
   showAdminModal,
   onCloseAdminModal,
-  onGoogleSignIn,
+  onAdminSignIn,
   onSignOut,
   onDeleteRegistration,
 }) => {
   const [search, setSearch] = useState('');
   const [compFilter, setCompFilter] = useState<CompetitionId | 'all'>('all');
   const [divisionFilter, setDivisionFilter] = useState<DivisionType | 'all'>('all');
+  const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
   const [adminError, setAdminError] = useState('');
+  const [isLoggingIn, setIsLoggingIn] = useState(false);
+  const [copiedUid, setCopiedUid] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
   const filteredAdmin = useMemo(() => {
@@ -53,12 +57,57 @@ export const RegisteredGridSection: React.FC<RegisteredGridSectionProps> = ({
     });
   }, [privateRegistrations, compFilter, divisionFilter, search]);
 
-  const handleAdminSignIn = async () => {
+  const adminDisplayUsername = useMemo(() => {
+    if (!user?.email) return 'Admin';
+    return user.email.endsWith(`@${ADMIN_DOMAIN}`)
+      ? user.email.replace(`@${ADMIN_DOMAIN}`, '')
+      : user.email;
+  }, [user]);
+
+  const handleAdminSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
     setAdminError('');
+
+    if (!username.trim() || !password) {
+      setAdminError('กรุณากรอก Username และ Password ให้ครบถ้วน');
+      return;
+    }
+
+    setIsLoggingIn(true);
     try {
-      await onGoogleSignIn(true);
+      await onAdminSignIn(username, password);
+      setPassword('');
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      if (msg.includes('operation-not-allowed')) {
+        setAdminError(
+          'ยังไม่ได้เปิดใช้งานระบบ Email/Password ใน Firebase Console (Authentication → Sign-in method)'
+        );
+      } else if (
+        msg.includes('invalid-credential') ||
+        msg.includes('wrong-password') ||
+        msg.includes('user-not-found') ||
+        msg.includes('invalid-email')
+      ) {
+        setAdminError('ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง กรุณาลองใหม่อีกครั้ง');
+      } else if (msg.includes('too-many-requests')) {
+        setAdminError('ลองเข้าสู่ระบบผิดหลายครั้ง กรุณารอสักครู่แล้วลองใหม่');
+      } else {
+        setAdminError('ไม่สามารถเข้าสู่ระบบแอดมินได้ กรุณาตรวจสอบการตั้งค่า Firebase Auth');
+      }
+    } finally {
+      setIsLoggingIn(false);
+    }
+  };
+
+  const handleCopyUid = async () => {
+    if (!user?.uid) return;
+    try {
+      await navigator.clipboard.writeText(user.uid);
+      setCopiedUid(true);
+      window.setTimeout(() => setCopiedUid(false), 2000);
     } catch {
-      setAdminError('ไม่สามารถเข้าสู่ระบบ Google ได้ กรุณาอนุญาตป๊อปอัปแล้วลองใหม่');
+      // Ignore clipboard failure
     }
   };
 
@@ -150,13 +199,13 @@ export const RegisteredGridSection: React.FC<RegisteredGridSectionProps> = ({
               <div className="space-y-2">
                 <p className="inline-flex items-center gap-1.5 text-sm font-semibold text-emerald-400">
                   <ShieldCheck className="h-4 w-4" />
-                  โหมดแอดมิน ({user?.email})
+                  โหมดแอดมิน ({adminDisplayUsername})
                 </p>
                 <h2 className="font-display text-4xl font-bold tracking-tight text-white [text-wrap:balance]">
                   จัดการข้อมูลผู้สมัครและส่งออก CSV
                 </h2>
                 <p className="text-sm text-neutral-400">
-                  ส่วนนี้แสดงเฉพาะผู้ดูแลระบบที่ยืนยันตัวตนแล้วเท่านั้น
+                  ส่วนนี้แสดงเฉพาะผู้ดูแลระบบที่เข้าสู่ระบบแล้วเท่านั้น
                 </p>
               </div>
 
@@ -358,7 +407,7 @@ export const RegisteredGridSection: React.FC<RegisteredGridSectionProps> = ({
         </section>
       )}
 
-      {/* Admin Google Auth Modal */}
+      {/* Admin Username & Password Login Modal */}
       {showAdminModal && !isAdmin && (
         <div
           className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4 backdrop-blur-sm"
@@ -390,40 +439,115 @@ export const RegisteredGridSection: React.FC<RegisteredGridSectionProps> = ({
               </button>
             </div>
 
-            <div className="space-y-4 text-xs leading-relaxed text-neutral-300">
-              <p>
-                การเข้าดูรายชื่อผู้สมัครและดาวน์โหลดไฟล์ CSV สงวนสิทธิ์เฉพาะบัญชีผู้ดูแลระบบของกลุ่มสาระฯ (
-                <span className="font-mono text-[#D4AF37]">{ADMIN_EMAIL}</span>)
-                เท่านั้น
-              </p>
-
-              {user && user.email !== ADMIN_EMAIL && (
-                <div className="rounded-lg border border-[#F87171]/40 bg-[#F87171]/10 p-3 text-[#FCA5A5]">
-                  ขณะนี้คุณเข้าสู่ระบบด้วยบัญชี <span className="font-mono">{user.email}</span>{' '}
-                  ซึ่งไม่มีสิทธิ์แอดมิน กรุณาสลับไปใช้บัญชี <span className="font-mono">{ADMIN_EMAIL}</span>
+            {user ? (
+              <div className="space-y-4 text-xs leading-relaxed text-neutral-300">
+                <div className="rounded-lg border border-[#D4AF37]/40 bg-[#D4AF37]/10 p-4 space-y-2">
+                  <p className="font-semibold text-[#FDE68A]">
+                    ยืนยัน Username / Password แล้ว แต่บัญชีนี้ยังไม่ได้รับสิทธิ์แอดมินในกฎ Firestore
+                  </p>
+                  <p className="text-neutral-200">
+                    คัดลอกรหัส <span className="font-semibold text-white">User UID</span> ด้านล่างเพื่อนำไปอนุญาตสิทธิ์แอดมิน:
+                  </p>
+                  <div className="flex items-center justify-between gap-2 rounded-md border border-white/15 bg-[#0B0D0F] px-3 py-2">
+                    <span className="font-mono text-xs text-white truncate">{user.uid}</span>
+                    <button
+                      type="button"
+                      onClick={handleCopyUid}
+                      className="inline-flex items-center gap-1 whitespace-nowrap shrink-0 text-xs font-semibold text-[#D4AF37] hover:text-white cursor-pointer"
+                    >
+                      {copiedUid ? (
+                        <>
+                          <Check className="h-3.5 w-3.5 text-emerald-400" />
+                          <span className="text-emerald-400">คัดลอกแล้ว</span>
+                        </>
+                      ) : (
+                        <>
+                          <Copy className="h-3.5 w-3.5" />
+                          คัดลอก UID
+                        </>
+                      )}
+                    </button>
+                  </div>
                 </div>
-              )}
 
-              {adminError && <p className="text-[#F87171]">{adminError}</p>}
-
-              <div className="flex items-center justify-end gap-3 pt-2">
-                <button
-                  type="button"
-                  onClick={onCloseAdminModal}
-                  className="whitespace-nowrap shrink-0 rounded-md border border-white/15 px-4 py-2 text-xs font-medium text-neutral-300 hover:text-white cursor-pointer"
-                >
-                  ปิด
-                </button>
-                <button
-                  type="button"
-                  onClick={handleAdminSignIn}
-                  className="inline-flex items-center gap-1.5 whitespace-nowrap shrink-0 rounded-md bg-[#E10600] px-5 py-2 text-xs font-semibold text-white transition-colors hover:bg-[#B80500] cursor-pointer"
-                >
-                  <LogIn className="h-3.5 w-3.5" />
-                  เข้าสู่ระบบด้วยบัญชีแอดมิน
-                </button>
+                <div className="flex items-center justify-end gap-3">
+                  <button
+                    type="button"
+                    onClick={() => onSignOut()}
+                    className="whitespace-nowrap shrink-0 rounded-md border border-white/15 px-4 py-2 text-xs font-medium text-neutral-300 hover:text-white cursor-pointer"
+                  >
+                    ออกจากบัญชีนี้
+                  </button>
+                  <button
+                    type="button"
+                    onClick={onCloseAdminModal}
+                    className="whitespace-nowrap shrink-0 rounded-md bg-[#E10600] px-4 py-2 text-xs font-semibold text-white hover:bg-[#B80500] cursor-pointer"
+                  >
+                    ปิด
+                  </button>
+                </div>
               </div>
-            </div>
+            ) : (
+              <form onSubmit={handleAdminSubmit} noValidate className="space-y-4">
+                <p className="text-xs leading-relaxed text-neutral-300">
+                  กรอก Username และ Password ของแอดมินเพื่อดูรายชื่อผู้สมัครและดาวน์โหลดไฟล์ CSV
+                </p>
+
+                <div className="space-y-1.5">
+                  <label htmlFor="admin-username" className="block text-xs font-medium text-neutral-300">
+                    Username <span className="text-[#E10600]">*</span>
+                  </label>
+                  <input
+                    id="admin-username"
+                    type="text"
+                    autoComplete="username"
+                    value={username}
+                    onChange={(e) => setUsername(e.target.value)}
+                    placeholder="เช่น admin"
+                    className="w-full rounded-lg border border-white/15 bg-[#0B0D0F] px-3.5 py-2.5 text-sm text-white placeholder:text-neutral-500 focus:border-[#E10600] focus:outline-none"
+                  />
+                </div>
+
+                <div className="space-y-1.5">
+                  <label htmlFor="admin-password" className="block text-xs font-medium text-neutral-300">
+                    Password <span className="text-[#E10600]">*</span>
+                  </label>
+                  <input
+                    id="admin-password"
+                    type="password"
+                    autoComplete="current-password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    placeholder="••••••••"
+                    className="w-full rounded-lg border border-white/15 bg-[#0B0D0F] px-3.5 py-2.5 text-sm text-white placeholder:text-neutral-500 focus:border-[#E10600] focus:outline-none"
+                  />
+                </div>
+
+                {adminError && (
+                  <p className="rounded-lg border border-[#F87171]/40 bg-[#F87171]/10 px-3 py-2 text-xs text-[#FCA5A5]">
+                    {adminError}
+                  </p>
+                )}
+
+                <div className="flex items-center justify-end gap-3 pt-2">
+                  <button
+                    type="button"
+                    onClick={onCloseAdminModal}
+                    className="whitespace-nowrap shrink-0 rounded-md border border-white/15 px-4 py-2 text-xs font-medium text-neutral-300 hover:text-white cursor-pointer"
+                  >
+                    ปิด
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={isLoggingIn}
+                    className="inline-flex items-center gap-1.5 whitespace-nowrap shrink-0 rounded-md bg-[#E10600] px-5 py-2 text-xs font-semibold text-white transition-colors hover:bg-[#B80500] disabled:opacity-50 cursor-pointer"
+                  >
+                    <LogIn className="h-3.5 w-3.5" />
+                    {isLoggingIn ? 'กำลังตรวจสอบ...' : 'เข้าสู่ระบบแอดมิน'}
+                  </button>
+                </div>
+              </form>
+            )}
           </div>
         </div>
       )}

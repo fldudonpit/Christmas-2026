@@ -27,7 +27,8 @@ service cloud.firestore {
     }
 
     function isBootstrappedAdmin() {
-      return isVerifiedUser() && request.auth.token.email == 'fldudonpit@gmail.com';
+      return (isVerifiedUser() && request.auth.token.email == 'fldudonpit@gmail.com')
+        || (isSignedIn() && request.auth.uid == 'csyH359tc1QBUyu3cAzsfS0sIvE2');
     }
 
     function isAdmin() {
@@ -152,8 +153,8 @@ service cloud.firestore {
 
     // Committee Admins
     match /admins/{adminUid} {
-      allow get: if isVerifiedUser() && isValidId(adminUid) && (
-        request.auth.uid == adminUid || isBootstrappedAdmin()
+      allow get: if isValidId(adminUid) && (
+        isBootstrappedAdmin() || (isVerifiedUser() && request.auth.uid == adminUid)
       );
       allow list: if isBootstrappedAdmin();
       allow create: if isBootstrappedAdmin()

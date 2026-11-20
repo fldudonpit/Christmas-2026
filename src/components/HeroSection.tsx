@@ -4,6 +4,8 @@ import { EVENT_DATE_ISO } from '../data/competitions';
 import { CompetitionId } from '../types/competition';
 import { CircuitArtwork } from './CircuitArtwork';
 
+const POSTER_IMAGE_URL = '/assets/aistudio/4919bf89-6e1b-4f30-a016-6a315c46e0aa_da5e8a5d.png';
+
 interface HeroSectionProps {
   selectedCompetitionId: CompetitionId;
   onSelectCompetition: (id: CompetitionId) => void;
@@ -42,6 +44,7 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
   onRegisterClick,
 }) => {
   const [countdown, setCountdown] = useState<CountdownState>(calculateCountdown);
+  const [posterFailed, setPosterFailed] = useState(false);
 
   useEffect(() => {
     const timer = window.setInterval(() => {
@@ -144,8 +147,37 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
           </div>
         </div>
 
-        {/* Simple Student Journey Strip + Locked Results & Certificates Menus */}
+        {/* Event Overview Poster Showcase (Immediately following Countdown) */}
         <div className="mt-10 border-t border-white/10 pt-8">
+          <a
+            href="#register"
+            aria-label="ดูโปสเตอร์กิจกรรมทั้งหมด 6 รายการและไปยังแบบฟอร์มสมัคร"
+            className="block overflow-hidden rounded-xl border border-white/10 bg-[#12151A] transition-colors duration-150 hover:border-white/25 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
+          >
+            {posterFailed ? (
+              <div className="flex aspect-video w-full flex-col items-center justify-center gap-3 bg-[#12151A] px-6 text-center">
+                <Trophy className="h-10 w-10 text-[#D4AF37]" />
+                <p className="font-display text-2xl font-bold text-white">
+                  Christmas Grand Prix 2569 · 6 กิจกรรมแข่งขัน
+                </p>
+                <p className="text-sm text-neutral-400">
+                  Singing Contest · Christmas Card · Speech · Drawing &amp; Painting · English Quiz · Cover Dance
+                </p>
+              </div>
+            ) : (
+              <img
+                src={POSTER_IMAGE_URL}
+                alt="โปสเตอร์กิจกรรมงานคริสต์มาส Christmas Competition 6 รายการแข่งขัน โรงเรียนอุดรพิทยานุกูล"
+                referrerPolicy="no-referrer"
+                onError={() => setPosterFailed(true)}
+                className="block aspect-video w-full object-cover"
+              />
+            )}
+          </a>
+        </div>
+
+        {/* Simple Student Journey Strip + Locked Results & Certificates Menus */}
+        <div className="mt-8 border-t border-white/10 pt-8">
           <div className="mb-4 flex flex-col justify-between gap-2 sm:flex-row sm:items-center">
             <h2 className="text-sm font-semibold text-white">
               เมนูหลักและขั้นตอนการเข้าร่วม
@@ -191,7 +223,7 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
               </div>
               <div className="mt-3">
                 <p className="text-sm font-semibold text-white">สมัครแข่งขันออนไลน์</p>
-                <p className="mt-1 text-xs text-neutral-300">กรอกข้อมูลและรับ Race Pass ทันที</p>
+                <p className="mt-1 text-xs text-neutral-300">กรอกข้อมูลและบันทึกรูปยืนยันการสมัคร</p>
               </div>
             </a>
 

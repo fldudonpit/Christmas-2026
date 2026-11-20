@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { ExternalLink, Plus, Trash2 } from 'lucide-react';
+import { CheckCircle2, Download, ExternalLink, Plus, Trash2, X } from 'lucide-react';
 import {
   ALL_GRADES,
   COMPETITIONS,
@@ -12,6 +12,10 @@ import {
   RegistrationEntry,
   TeamMember,
 } from '../types/competition';
+import {
+  downloadRegistrationAsImage,
+  getScheduleAndChannelInfo,
+} from '../utils/exportRegistrationImage';
 
 interface RegistrationSectionProps {
   selectedCompetitionId: CompetitionId;
@@ -22,6 +26,33 @@ interface RegistrationSectionProps {
 }
 
 const MAX_COVER_DANCE_MEMBERS = 10;
+
+const THAI_PREFIX_OPTIONS = [
+  { value: 'เด็กชาย', label: 'เด็กชาย', defaultEnglish: 'Master' },
+  { value: 'เด็กหญิง', label: 'เด็กหญิง', defaultEnglish: 'Miss' },
+  { value: 'นาย', label: 'นาย', defaultEnglish: 'Mr.' },
+  { value: 'นางสาว', label: 'นางสาว', defaultEnglish: 'Miss' },
+] as const;
+
+const ENGLISH_PREFIX_OPTIONS = [
+  { value: 'Master', label: 'Master' },
+  { value: 'Miss', label: 'Miss' },
+  { value: 'Mr.', label: 'Mr.' },
+  { value: 'Ms.', label: 'Ms.' },
+] as const;
+
+function stripLeadingPrefix(name: string, prefixes: string[]): string {
+  const trimmed = name.trim();
+  for (const prefix of prefixes) {
+    const cleanPrefix = prefix.replace(/\.$/, '');
+    const escaped = cleanPrefix.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const regex = new RegExp(`^${escaped}(?:\\.|\\s)+`, 'i');
+    if (regex.test(trimmed)) {
+      return trimmed.replace(regex, '').trim();
+    }
+  }
+  return trimmed;
+}
 
 export const RegistrationSection: React.FC<RegistrationSectionProps> = ({
   selectedCompetitionId,
@@ -36,7 +67,10 @@ export const RegistrationSection: React.FC<RegistrationSectionProps> = ({
   const isCombinedLevel = selectedComp.divisionMode === 'open';
 
   const [division, setDivision] = useState<DivisionType>(isCombinedLevel ? 'open' : 'junior');
+  const [thaiPrefix, setThaiPrefix] = useState('');
   const [studentName, setStudentName] = useState('');
+  const [englishPrefix, setEnglishPrefix] = useState('');
+  const [englishPrefixTouched, setEnglishPrefixTouched] = useState(false);
   const [englishFullName, setEnglishFullName] = useState('');
   const [studentId, setStudentId] = useState('');
   const [gradeLevel, setGradeLevel] = useState('ม.1');
@@ -53,6 +87,8 @@ export const RegistrationSection: React.FC<RegistrationSectionProps> = ({
   const [submitError, setSubmitError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [createdPass, setCreatedPass] = useState<RegistrationEntry | null>(null);
+  const [isDownloadingImage, setIsDownloadingImage] = useState(false);
+  const [downloadError, setDownloadError] = useState('');
 
   useEffect(() => {
     if (selectedComp.divisionMode === 'open') {
@@ -115,22 +151,59 @@ export const RegistrationSection: React.FC<RegistrationSectionProps> = ({
       : selectedComp.themeTopic.junior;
   }, [selectedComp, division]);
 
+  const handleThaiPrefixChange = (value: string) => {
+    setThaiPrefix(value);
+    setErrors((prev) => ({ ...prev, thaiPrefix: '' }));
+    if (!englishPrefixTouched) {
+      const matched = THAI_PREFIX_OPTIONS.find((opt) => opt.value === value);
+      setEnglishPrefix(matched ? matched.defaultEnglish : '');
+      if (matched) {
+        setErrors((prev) => ({ ...prev, englishPrefix: '' }));
+      }
+    }
+  };
+
+  const handleEnglishPrefixChange = (value: string) => {
+    setEnglishPrefix(value);
+    setEnglishPrefixTouched(true);
+    setErrors((prev) => ({ ...prev, englishPrefix: '' }));
+  };
+
   const validate = (): boolean => {
     const nextErrors: Record<string, string> = {};
 
-    const cleanStudentName = studentName.trim();
-    if (cleanStudentName.length < 2 || cleanStudentName.length > 150) {
-      nextErrors.studentName = 'กรุณากรอกชื่อ-นามสกุลภาษาไทย (2–150 ตัวอักษร)';
+    const cleanStudentName = stripLeadingPrefix(
+      studentName,
+      THAI_PREFIX_OPTIONS.map((p) => p.value)
+    );
+    const cleanEnglishName = stripLeadingPrefix(
+      englishFullName,
+      ENGLISH_PREFIX_OPTIONS.map((p) => p.value)
+    );
+
+    if (!thaiPrefix) {
+      nextErrors.thaiPrefix = 'กรุณาเลือกคำนำหน้าชื่อภาษาไทย';
     }
-    if (
-      selectedComp.id === 'drawing-painting' &&
-      (englishFullName.trim().length < 2 || englishFullName.trim().length > 150)
-    ) {
-      nextErrors.englishFullName =
-        'รายการ Drawing & Painting ต้องระบุชื่อ-นามสกุลภาษาอังกฤษด้วย (สำหรับเขียนด้านหลังภาพ)';
-    } else if (englishFullName.trim().length > 150) {
-      nextErrors.englishFullName = 'ชื่อ-นามสกุลภาษาอังกฤษต้องไม่เกิน 150 ตัวอักษร';
+    if (cleanStudentName.length < 2 || `${thaiPrefix}${cleanStudentName}`.length > 150) {
+      nextErrors.studentName = 'กรุณากรอกชื่อ-นามสกุลภาษาไทย (2–140 ตัวอักษร)';
     }
+
+    const isEnglishRequired =
+      selectedComp.id === 'drawing-painting' || cleanEnglishName.length > 0;
+    if (isEnglishRequired) {
+      if (!englishPrefix) {
+        nextErrors.englishPrefix = 'กรุณาเลือกคำนำหน้าชื่อภาษาอังกฤษ';
+      }
+      if (cleanEnglishName.length < 2) {
+        nextErrors.englishFullName =
+          selectedComp.id === 'drawing-painting'
+            ? 'รายการ Drawing & Painting ต้องระบุชื่อ-นามสกุลภาษาอังกฤษด้วย (สำหรับเขียนด้านหลังภาพ)'
+            : 'กรุณากรอกชื่อ-นามสกุลภาษาอังกฤษอย่างน้อย 2 ตัวอักษร';
+      } else if (`${englishPrefix} ${cleanEnglishName}`.length > 150) {
+        nextErrors.englishFullName = 'ชื่อ-นามสกุลภาษาอังกฤษต้องไม่เกิน 150 ตัวอักษร';
+      }
+    }
+
     if (!/^[0-9]{4,8}$/.test(studentId.trim())) {
       nextErrors.studentId = 'กรุณากรอกเลขประจำตัวนักเรียนเป็นตัวเลข 4–8 หลัก';
     }
@@ -154,7 +227,8 @@ export const RegistrationSection: React.FC<RegistrationSectionProps> = ({
     }
     if (submissionUrl.trim()) {
       if (!/^https?:\/\/.+/i.test(submissionUrl.trim()) || submissionUrl.trim().length > 500) {
-        nextErrors.submissionUrl = 'ลิงก์คลิปต้องขึ้นต้นด้วย https:// หรือ http:// และไม่เกิน 500 ตัวอักษร';
+        nextErrors.submissionUrl =
+          'ลิงก์คลิปต้องขึ้นต้นด้วย https:// หรือ http:// และไม่เกิน 500 ตัวอักษร';
       }
     }
 
@@ -167,6 +241,21 @@ export const RegistrationSection: React.FC<RegistrationSectionProps> = ({
     setSubmitError('');
 
     if (!validate()) return;
+
+    const cleanStudentName = stripLeadingPrefix(
+      studentName,
+      THAI_PREFIX_OPTIONS.map((p) => p.value)
+    );
+    const fullThaiName = `${thaiPrefix}${cleanStudentName}`.slice(0, 150);
+
+    const cleanEnglishName = stripLeadingPrefix(
+      englishFullName,
+      ENGLISH_PREFIX_OPTIONS.map((p) => p.value)
+    );
+    const fullEnglishName =
+      cleanEnglishName.length > 0
+        ? `${englishPrefix} ${cleanEnglishName}`.trim().slice(0, 150)
+        : undefined;
 
     const cleanedMembers =
       selectedComp.id === 'cover-dance'
@@ -193,8 +282,8 @@ export const RegistrationSection: React.FC<RegistrationSectionProps> = ({
       const saved = await onAddRegistration({
         competitionId: selectedComp.id,
         division: isCombinedLevel ? 'open' : division,
-        studentName: studentName.trim(),
-        englishFullName: englishFullName.trim() || undefined,
+        studentName: fullThaiName,
+        englishFullName: fullEnglishName,
         studentId: studentId.trim(),
         gradeLevel,
         classroom: classroom.trim(),
@@ -208,7 +297,10 @@ export const RegistrationSection: React.FC<RegistrationSectionProps> = ({
       });
 
       setCreatedPass(saved);
+      setThaiPrefix('');
       setStudentName('');
+      setEnglishPrefix('');
+      setEnglishPrefixTouched(false);
       setEnglishFullName('');
       setStudentId('');
       setClassroom('');
@@ -241,6 +333,9 @@ export const RegistrationSection: React.FC<RegistrationSectionProps> = ({
       ? createdPassComp.contacts[1]
       : createdPassComp.contacts[0]
     : null;
+  const createdPassSchedule = createdPass
+    ? getScheduleAndChannelInfo(createdPassComp ?? undefined, createdPassContact)
+    : null;
 
   return (
     <section id="register" className="border-b border-white/10 bg-[#0B0D0F] py-16">
@@ -254,8 +349,7 @@ export const RegistrationSection: React.FC<RegistrationSectionProps> = ({
                 ลงทะเบียนเข้าร่วมการแข่งขัน
               </h2>
               <p className="text-sm leading-relaxed text-neutral-400">
-                กรอกข้อมูลเพื่อบันทึกลงฐานข้อมูลกลางของโรงเรียนอย่างถาวร และรับรหัส Race Pass
-                สำหรับใช้ตรวจสอบสิทธิ์การแข่งขัน
+                กรอกข้อมูลเพื่อบันทึกลงฐานข้อมูลกลางของโรงเรียนอย่างถาวร และดาวน์โหลดภาพสรุปข้อมูลการสมัครเก็บไว้เป็นหลักฐานได้ทันที
               </p>
             </div>
 
@@ -330,114 +424,6 @@ export const RegistrationSection: React.FC<RegistrationSectionProps> = ({
                 </div>
               )}
             </div>
-
-            {/* Created Race Pass Confirmation Card */}
-            {createdPass && (
-              <div
-                role="status"
-                aria-live="polite"
-                className="rounded-xl border border-[#D4AF37] bg-[#14181F] p-6 space-y-4"
-              >
-                <div className="checkered-border h-2 w-full rounded-sm opacity-60" />
-                <div className="flex items-start justify-between gap-4">
-                  <div>
-                    <p className="text-xs font-semibold text-emerald-400">
-                      บันทึกข้อมูลลงฐานข้อมูลคลาวด์สำเร็จ
-                    </p>
-                    <h3 className="font-display text-3xl font-extrabold text-white">
-                      Race Pass {createdPass.raceNumber}
-                    </h3>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => window.print()}
-                    className="no-print whitespace-nowrap shrink-0 rounded-md border border-white/20 px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-white/10 cursor-pointer"
-                  >
-                    พิมพ์บัตร
-                  </button>
-                </div>
-
-                <dl className="space-y-1.5 border-t border-white/10 pt-3 text-xs">
-                  <div className="flex justify-between gap-2">
-                    <dt className="text-neutral-400">รายการแข่งขัน</dt>
-                    <dd className="font-semibold text-white">{createdPassComp?.title}</dd>
-                  </div>
-                  <div className="flex justify-between gap-2">
-                    <dt className="text-neutral-400">รุ่นการแข่งขัน</dt>
-                    <dd className="text-neutral-200 text-right">
-                      {getDivisionText(createdPass.division)}
-                    </dd>
-                  </div>
-                  <div className="flex justify-between gap-2">
-                    <dt className="text-neutral-400">ผู้สมัคร</dt>
-                    <dd className="text-white text-right">{createdPass.studentName}</dd>
-                  </div>
-                  {createdPass.englishFullName && (
-                    <div className="flex justify-between gap-2">
-                      <dt className="text-neutral-400">ชื่อภาษาอังกฤษ</dt>
-                      <dd className="text-neutral-200 text-right">{createdPass.englishFullName}</dd>
-                    </div>
-                  )}
-                  <div className="flex justify-between gap-2">
-                    <dt className="text-neutral-400">ชั้น / ห้อง</dt>
-                    <dd className="font-mono text-neutral-200 tabular-nums">
-                      {createdPass.gradeLevel}/{createdPass.classroom} · {createdPass.studentId}
-                    </dd>
-                  </div>
-                  {createdPass.teamName && (
-                    <div className="flex justify-between gap-2">
-                      <dt className="text-neutral-400">ชื่อทีม</dt>
-                      <dd className="text-[#D4AF37]">{createdPass.teamName}</dd>
-                    </div>
-                  )}
-                </dl>
-
-                {createdPass.teamMembersList && createdPass.teamMembersList.length > 0 && (
-                  <div className="border-t border-white/10 pt-3 text-xs">
-                    <p className="font-semibold text-neutral-300">
-                      สมาชิกในทีม ({createdPass.teamMembersList.length} คน):
-                    </p>
-                    <ul className="mt-1.5 space-y-1 text-neutral-300">
-                      {createdPass.teamMembersList.map((member, idx) => (
-                        <li key={idx} className="font-mono tabular-nums">
-                          {idx + 1}. {member.name}
-                          {member.gradeClass ? ` · ${member.gradeClass}` : ''}
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
-
-                {createdPassContact && (
-                  <div className="rounded-lg border border-white/10 bg-[#0B0D0F] p-3 text-xs text-neutral-300 space-y-1">
-                    <p className="font-semibold text-white">ขั้นตอนถัดไป:</p>
-                    {createdPassContact.email && (
-                      <p>
-                        ส่งคลิปวิดีโอมาที่อีเมล{' '}
-                        <span className="font-mono text-[#D4AF37]">{createdPassContact.email}</span>{' '}
-                        ภายใน 8 ธ.ค. 2569
-                      </p>
-                    )}
-                    {createdPassContact.room && (
-                      <p>
-                        สถานที่: {createdPassContact.room}
-                        {createdPassContact.teacher ? ` (${createdPassContact.teacher})` : ''}
-                      </p>
-                    )}
-                    {createdPassContact.lineOpenChat && (
-                      <a
-                        href={createdPassContact.lineOpenChat}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="inline-flex items-center gap-1 text-emerald-400 underline"
-                      >
-                        เข้ากลุ่ม LINE OpenChat <ExternalLink className="h-3 w-3" />
-                      </a>
-                    )}
-                  </div>
-                )}
-              </div>
-            )}
           </div>
 
           {/* Right Form Column */}
@@ -517,46 +503,108 @@ export const RegistrationSection: React.FC<RegistrationSectionProps> = ({
 
               {/* Step 3: Student Info */}
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                <div className="space-y-1.5">
-                  <label htmlFor="studentName" className="block text-xs font-medium text-neutral-300">
-                    ชื่อ - นามสกุล (ภาษาไทย) <span className="text-[#E10600]">*</span>
-                  </label>
-                  <input
-                    id="studentName"
-                    type="text"
-                    maxLength={150}
-                    value={studentName}
-                    onChange={(e) => setStudentName(e.target.value)}
-                    placeholder="เช่น นายพิชญะ อุดรพิทย์"
-                    className="w-full rounded-lg border border-white/15 bg-[#0B0D0F] px-4 py-2.5 text-sm text-white placeholder:text-neutral-500 focus:border-[#E10600] focus:outline-none"
-                  />
-                  {errors.studentName && (
-                    <p className="text-xs text-[#F87171]">{errors.studentName}</p>
-                  )}
+                <div className="space-y-1.5 sm:col-span-2">
+                  <div className="flex flex-col gap-2 sm:flex-row sm:items-start">
+                    <div className="w-full space-y-1.5 sm:w-44 sm:shrink-0">
+                      <label htmlFor="thaiPrefix" className="block text-xs font-medium text-neutral-300">
+                        คำนำหน้า (ไทย) <span className="text-[#E10600]">*</span>
+                      </label>
+                      <select
+                        id="thaiPrefix"
+                        value={thaiPrefix}
+                        onChange={(e) => handleThaiPrefixChange(e.target.value)}
+                        className="w-full rounded-lg border border-white/15 bg-[#0B0D0F] px-3 py-2.5 text-sm text-white focus:border-[#E10600] focus:outline-none"
+                      >
+                        <option value="">เลือกคำนำหน้า</option>
+                        {THAI_PREFIX_OPTIONS.map((opt) => (
+                          <option key={opt.value} value={opt.value}>
+                            {opt.label}
+                          </option>
+                        ))}
+                      </select>
+                      {errors.thaiPrefix && (
+                        <p className="text-xs text-[#F87171]">{errors.thaiPrefix}</p>
+                      )}
+                    </div>
+
+                    <div className="flex-1 space-y-1.5">
+                      <label htmlFor="studentName" className="block text-xs font-medium text-neutral-300">
+                        ชื่อ - นามสกุล (ภาษาไทย) <span className="text-[#E10600]">*</span>
+                      </label>
+                      <input
+                        id="studentName"
+                        type="text"
+                        maxLength={140}
+                        value={studentName}
+                        onChange={(e) => {
+                          setStudentName(e.target.value);
+                          setErrors((prev) => ({ ...prev, studentName: '' }));
+                        }}
+                        placeholder="ไม่ต้องใส่คำนำหน้า เช่น พิชญะ อุดรพิทย์"
+                        className="w-full rounded-lg border border-white/15 bg-[#0B0D0F] px-4 py-2.5 text-sm text-white placeholder:text-neutral-500 focus:border-[#E10600] focus:outline-none"
+                      />
+                      {errors.studentName && (
+                        <p className="text-xs text-[#F87171]">{errors.studentName}</p>
+                      )}
+                    </div>
+                  </div>
                 </div>
 
-                <div className="space-y-1.5">
-                  <label
-                    htmlFor="englishFullName"
-                    className="block text-xs font-medium text-neutral-300"
-                  >
-                    ชื่อ - นามสกุล (ภาษาอังกฤษ){' '}
-                    {selectedComp.id === 'drawing-painting' && (
-                      <span className="text-[#E10600]">*</span>
-                    )}
-                  </label>
-                  <input
-                    id="englishFullName"
-                    type="text"
-                    maxLength={150}
-                    value={englishFullName}
-                    onChange={(e) => setEnglishFullName(e.target.value)}
-                    placeholder="เช่น Mr. Phitchaya Udonpit"
-                    className="w-full rounded-lg border border-white/15 bg-[#0B0D0F] px-4 py-2.5 text-sm text-white placeholder:text-neutral-500 focus:border-[#E10600] focus:outline-none"
-                  />
-                  {errors.englishFullName && (
-                    <p className="text-xs text-[#F87171]">{errors.englishFullName}</p>
-                  )}
+                <div className="space-y-1.5 sm:col-span-2">
+                  <div className="flex flex-col gap-2 sm:flex-row sm:items-start">
+                    <div className="w-full space-y-1.5 sm:w-44 sm:shrink-0">
+                      <label htmlFor="englishPrefix" className="block text-xs font-medium text-neutral-300">
+                        คำนำหน้า (อังกฤษ){' '}
+                        {(selectedComp.id === 'drawing-painting' ||
+                          englishFullName.trim().length > 0) && (
+                          <span className="text-[#E10600]">*</span>
+                        )}
+                      </label>
+                      <select
+                        id="englishPrefix"
+                        value={englishPrefix}
+                        onChange={(e) => handleEnglishPrefixChange(e.target.value)}
+                        className="w-full rounded-lg border border-white/15 bg-[#0B0D0F] px-3 py-2.5 text-sm text-white focus:border-[#E10600] focus:outline-none"
+                      >
+                        <option value="">Select Title</option>
+                        {ENGLISH_PREFIX_OPTIONS.map((opt) => (
+                          <option key={opt.value} value={opt.value}>
+                            {opt.label}
+                          </option>
+                        ))}
+                      </select>
+                      {errors.englishPrefix && (
+                        <p className="text-xs text-[#F87171]">{errors.englishPrefix}</p>
+                      )}
+                    </div>
+
+                    <div className="flex-1 space-y-1.5">
+                      <label
+                        htmlFor="englishFullName"
+                        className="block text-xs font-medium text-neutral-300"
+                      >
+                        ชื่อ - นามสกุล (ภาษาอังกฤษ){' '}
+                        {selectedComp.id === 'drawing-painting' && (
+                          <span className="text-[#E10600]">*</span>
+                        )}
+                      </label>
+                      <input
+                        id="englishFullName"
+                        type="text"
+                        maxLength={140}
+                        value={englishFullName}
+                        onChange={(e) => {
+                          setEnglishFullName(e.target.value);
+                          setErrors((prev) => ({ ...prev, englishFullName: '' }));
+                        }}
+                        placeholder="ไม่ต้องใส่คำนำหน้า เช่น Phitchaya Udonpit"
+                        className="w-full rounded-lg border border-white/15 bg-[#0B0D0F] px-4 py-2.5 text-sm text-white placeholder:text-neutral-500 focus:border-[#E10600] focus:outline-none"
+                      />
+                      {errors.englishFullName && (
+                        <p className="text-xs text-[#F87171]">{errors.englishFullName}</p>
+                      )}
+                    </div>
+                  </div>
                 </div>
 
                 <div className="space-y-1.5">
@@ -822,6 +870,246 @@ export const RegistrationSection: React.FC<RegistrationSectionProps> = ({
           </div>
         </div>
       </div>
+
+      {/* Registration Confirmation Pop-up Modal */}
+      {createdPass && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4 backdrop-blur-sm"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="registration-success-title"
+          onClick={() => {
+            setCreatedPass(null);
+            setDownloadError('');
+          }}
+        >
+          <div
+            className="max-h-[90vh] w-full max-w-xl overflow-y-auto rounded-xl border border-white/15 bg-[#12151A] p-6 sm:p-8 space-y-5"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-start justify-between gap-4 border-b border-white/10 pb-4">
+              <div className="space-y-1">
+                <p className="inline-flex items-center gap-1.5 text-xs font-semibold text-emerald-400">
+                  <CheckCircle2 className="h-4 w-4" />
+                  บันทึกข้อมูลลงฐานข้อมูลสำเร็จ
+                </p>
+                <h3
+                  id="registration-success-title"
+                  className="font-display text-3xl font-extrabold text-white"
+                >
+                  ข้อมูลการสมัครแข่งขัน
+                </h3>
+                <p className="text-xs text-neutral-400">
+                  กรุณาตรวจสอบรายละเอียดและดาวน์โหลดรูปภาพเก็บไว้เป็นหลักฐาน
+                </p>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setCreatedPass(null);
+                  setDownloadError('');
+                }}
+                aria-label="ปิดหน้าต่างข้อมูลการสมัคร"
+                className="rounded-md border border-white/15 p-2 text-neutral-300 transition-colors hover:bg-white/10 hover:text-white cursor-pointer"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            <dl className="divide-y divide-white/10 rounded-lg border border-white/10 bg-[#0B0D0F] px-4 text-xs">
+              <div className="flex justify-between gap-4 py-3">
+                <dt className="text-neutral-400 shrink-0">รายการแข่งขัน</dt>
+                <dd className="font-semibold text-white text-right">
+                  {createdPassComp?.title ?? createdPass.competitionId}
+                </dd>
+              </div>
+              <div className="flex justify-between gap-4 py-3">
+                <dt className="text-neutral-400 shrink-0">รุ่นการแข่งขัน</dt>
+                <dd className="text-neutral-200 text-right">
+                  {getDivisionText(createdPass.division)}
+                </dd>
+              </div>
+              {createdPassSchedule && (
+                <>
+                  <div className="flex justify-between gap-4 py-3">
+                    <dt className="text-neutral-400 shrink-0">
+                      {createdPassSchedule.dateLabel}
+                    </dt>
+                    <dd className="font-semibold text-[#FDE68A] text-right">
+                      {createdPassSchedule.dateText}
+                    </dd>
+                  </div>
+                  <div className="flex justify-between gap-4 py-3">
+                    <dt className="text-neutral-400 shrink-0">
+                      {createdPassSchedule.channelLabel}
+                    </dt>
+                    <dd className="font-semibold text-[#FDE68A] text-right">
+                      {createdPassSchedule.channelText}
+                    </dd>
+                  </div>
+                </>
+              )}
+              <div className="flex justify-between gap-4 py-3">
+                <dt className="text-neutral-400 shrink-0">ชื่อ-นามสกุล (ไทย)</dt>
+                <dd className="font-medium text-white text-right">{createdPass.studentName}</dd>
+              </div>
+              {createdPass.englishFullName && (
+                <div className="flex justify-between gap-4 py-3">
+                  <dt className="text-neutral-400 shrink-0">ชื่อ-นามสกุล (อังกฤษ)</dt>
+                  <dd className="text-neutral-200 text-right">{createdPass.englishFullName}</dd>
+                </div>
+              )}
+              <div className="flex justify-between gap-4 py-3">
+                <dt className="text-neutral-400 shrink-0">ชั้น / ห้อง · เลขประจำตัว</dt>
+                <dd className="font-mono text-neutral-200 tabular-nums text-right">
+                  {createdPass.gradeLevel}/{createdPass.classroom} · {createdPass.studentId}
+                </dd>
+              </div>
+              <div className="flex justify-between gap-4 py-3">
+                <dt className="text-neutral-400 shrink-0">เบอร์โทรศัพท์ติดต่อ</dt>
+                <dd className="font-mono text-neutral-200 tabular-nums text-right">
+                  {createdPass.contactInfo}
+                </dd>
+              </div>
+              {createdPass.teamName && (
+                <div className="flex justify-between gap-4 py-3">
+                  <dt className="text-neutral-400 shrink-0">ชื่อทีม</dt>
+                  <dd className="font-semibold text-[#D4AF37] text-right">
+                    {createdPass.teamName}
+                  </dd>
+                </div>
+              )}
+              {createdPass.submissionTitle && (
+                <div className="flex justify-between gap-4 py-3">
+                  <dt className="text-neutral-400 shrink-0">ชื่อเพลง / ผลงาน</dt>
+                  <dd className="text-neutral-200 text-right">{createdPass.submissionTitle}</dd>
+                </div>
+              )}
+              {createdPass.submissionUrl && (
+                <div className="flex justify-between gap-4 py-3">
+                  <dt className="text-neutral-400 shrink-0">ลิงก์คลิปที่ส่ง</dt>
+                  <dd className="font-mono text-[#D4AF37] break-all text-right">
+                    {createdPass.submissionUrl}
+                  </dd>
+                </div>
+              )}
+            </dl>
+
+            {createdPass.teamMembersList && createdPass.teamMembersList.length > 0 && (
+              <div className="rounded-lg border border-white/10 bg-[#0B0D0F] p-4 text-xs">
+                <p className="font-semibold text-[#D4AF37]">
+                  สมาชิกในทีม ({createdPass.teamMembersList.length} คน)
+                </p>
+                <ul className="mt-2 space-y-1 text-neutral-200">
+                  {createdPass.teamMembersList.map((member, idx) => (
+                    <li key={idx} className="font-mono tabular-nums">
+                      {idx + 1}. {member.name}
+                      {member.gradeClass ? ` · ${member.gradeClass}` : ''}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
+            {createdPassContact && (
+              <div className="rounded-lg border border-white/10 bg-[#0B0D0F] p-4 text-xs text-neutral-300 space-y-1.5">
+                <p className="font-semibold text-white">ขั้นตอนถัดไป</p>
+                {createdPassContact.email && (
+                  <p>
+                    ส่งคลิปวิดีโอมาที่อีเมล{' '}
+                    <span className="font-mono text-[#D4AF37]">{createdPassContact.email}</span>{' '}
+                    ภายใน 8 ธ.ค. 2569
+                  </p>
+                )}
+                {createdPassComp?.channel === 'onsite_artwork' && createdPassContact.room && (
+                  <p>
+                    ส่งผลงานตัวจริงที่{' '}
+                    <span className="font-semibold text-[#D4AF37]">
+                      {createdPassContact.room}
+                      {createdPassContact.teacher ? ` (${createdPassContact.teacher})` : ''}
+                    </span>{' '}
+                    ภายใน 8 ธ.ค. 2569
+                  </p>
+                )}
+                {createdPassComp?.channel === 'onsite_live' && createdPassContact.room && (
+                  <p>
+                    เข้าแข่งขันวันที่{' '}
+                    <span className="font-semibold text-[#D4AF37]">
+                      {createdPassComp.id === 'speech' ? '8 ธันวาคม 2569' : '15 ธันวาคม 2569'}
+                    </span>{' '}
+                    ณ <span className="font-semibold text-white">{createdPassContact.room}</span>
+                    {createdPassContact.note ? ` (${createdPassContact.note})` : ''}
+                  </p>
+                )}
+                {createdPassComp?.channel === 'hybrid_stage' && createdPassContact.room && (
+                  <p>
+                    วันแข่งจริง: <span className="font-semibold text-[#D4AF37]">18 ธันวาคม 2569</span>{' '}
+                    ณ <span className="font-semibold text-white">{createdPassContact.room}</span>
+                  </p>
+                )}
+                {createdPassContact.note && createdPassComp?.channel !== 'onsite_live' && (
+                  <p className="text-neutral-400">{createdPassContact.note}</p>
+                )}
+                {createdPassContact.lineOpenChat && (
+                  <div className="pt-1">
+                    <a
+                      href={createdPassContact.lineOpenChat}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="inline-flex items-center gap-1.5 rounded-md border border-emerald-500/40 bg-emerald-500/10 px-3 py-1.5 font-semibold text-emerald-300 transition-colors hover:bg-emerald-500/20"
+                    >
+                      เข้ากลุ่ม LINE OpenChat <ExternalLink className="h-3.5 w-3.5" />
+                    </a>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {downloadError && (
+              <p className="rounded-lg border border-[#F87171]/40 bg-[#F87171]/10 px-3 py-2 text-xs text-[#FCA5A5]">
+                {downloadError}
+              </p>
+            )}
+
+            <div className="flex flex-col-reverse justify-end gap-3 border-t border-white/10 pt-4 sm:flex-row sm:items-center">
+              <button
+                type="button"
+                onClick={() => {
+                  setCreatedPass(null);
+                  setDownloadError('');
+                }}
+                className="whitespace-nowrap shrink-0 rounded-md border border-white/15 px-4 py-2.5 text-xs font-medium text-neutral-300 transition-colors hover:text-white cursor-pointer"
+              >
+                ปิดหน้าต่าง
+              </button>
+              <button
+                type="button"
+                disabled={isDownloadingImage}
+                onClick={async () => {
+                  setDownloadError('');
+                  setIsDownloadingImage(true);
+                  try {
+                    await downloadRegistrationAsImage(
+                      createdPass,
+                      createdPassComp ?? undefined,
+                      createdPassContact
+                    );
+                  } catch {
+                    setDownloadError('ไม่สามารถสร้างไฟล์รูปภาพได้ กรุณาลองใหม่อีกครั้ง');
+                  } finally {
+                    setIsDownloadingImage(false);
+                  }
+                }}
+                className="inline-flex items-center justify-center gap-2 whitespace-nowrap shrink-0 rounded-md bg-[#E10600] px-5 py-2.5 text-xs font-semibold text-white transition-colors hover:bg-[#B80500] disabled:opacity-50 cursor-pointer"
+              >
+                <Download className="h-4 w-4" />
+                {isDownloadingImage ? 'กำลังสร้างรูปภาพ...' : 'ดาวน์โหลดเป็นรูปภาพ (PNG)'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </section>
   );
 };
