@@ -41,6 +41,17 @@ const ENGLISH_PREFIX_OPTIONS = [
   { value: 'Ms.', label: 'Ms.' },
 ] as const;
 
+const ALL_PREFIX_VALUES = [
+  ...THAI_PREFIX_OPTIONS.map((p) => p.value),
+  ...ENGLISH_PREFIX_OPTIONS.map((p) => p.value),
+];
+
+interface TeamMemberFormRow {
+  prefix: string;
+  name: string;
+  gradeClass: string;
+}
+
 function stripLeadingPrefix(name: string, prefixes: string[]): string {
   const trimmed = name.trim();
   for (const prefix of prefixes) {
@@ -77,8 +88,8 @@ export const RegistrationSection: React.FC<RegistrationSectionProps> = ({
   const [classroom, setClassroom] = useState('');
   const [contactInfo, setContactInfo] = useState('');
   const [teamName, setTeamName] = useState('');
-  const [teamMembersList, setTeamMembersList] = useState<TeamMember[]>([
-    { name: '', gradeClass: '' },
+  const [teamMembersList, setTeamMembersList] = useState<TeamMemberFormRow[]>([
+    { prefix: '', name: '', gradeClass: '' },
   ]);
   const [submissionTitle, setSubmissionTitle] = useState('');
   const [submissionUrl, setSubmissionUrl] = useState('');
@@ -119,7 +130,7 @@ export const RegistrationSection: React.FC<RegistrationSectionProps> = ({
 
   const handleAddMemberRow = () => {
     if (teamMembersList.length >= MAX_COVER_DANCE_MEMBERS) return;
-    setTeamMembersList((prev) => [...prev, { name: '', gradeClass: '' }]);
+    setTeamMembersList((prev) => [...prev, { prefix: '', name: '', gradeClass: '' }]);
   };
 
   const handleRemoveMemberRow = (index: number) => {
@@ -129,7 +140,7 @@ export const RegistrationSection: React.FC<RegistrationSectionProps> = ({
 
   const handleUpdateMemberRow = (
     index: number,
-    field: keyof TeamMember,
+    field: keyof TeamMemberFormRow,
     value: string
   ) => {
     setTeamMembersList((prev) =>
@@ -217,9 +228,21 @@ export const RegistrationSection: React.FC<RegistrationSectionProps> = ({
       if (teamName.trim().length < 1 || teamName.trim().length > 100) {
         nextErrors.teamName = 'กรุณากรอกชื่อทีมสำหรับรายการ Cover Dance (ไม่เกิน 100 ตัวอักษร)';
       }
-      const validMembers = teamMembersList.filter((m) => m.name.trim().length > 0);
-      if (validMembers.length === 0) {
-        nextErrors.teamMembers = 'กรุณากรอกชื่อสมาชิกในทีมอย่างน้อย 1 คน';
+      const activeMembers = teamMembersList.filter(
+        (m) => m.prefix.trim().length > 0 || m.name.trim().length > 0 || m.gradeClass.trim().length > 0
+      );
+      if (activeMembers.length === 0) {
+        nextErrors.teamMembers = 'กรุณากรอกข้อมูลสมาชิกในทีมอย่างน้อย 1 คน';
+      } else {
+        const missingPrefix = activeMembers.some((m) => !m.prefix);
+        const invalidName = activeMembers.some(
+          (m) => stripLeadingPrefix(m.name, ALL_PREFIX_VALUES).length < 2
+        );
+        if (missingPrefix) {
+          nextErrors.teamMembers = 'กรุณาเลือกคำนำหน้าชื่อสมาชิกในทีมให้ครบทุกคน';
+        } else if (invalidName) {
+          nextErrors.teamMembers = 'กรุณากรอกชื่อ-นามสกุลสมาชิกในทีมให้ครบทุกคน (อย่างน้อย 2 ตัวอักษร)';
+        }
       }
     }
     if (submissionTitle.trim().length > 200) {
@@ -257,14 +280,26 @@ export const RegistrationSection: React.FC<RegistrationSectionProps> = ({
         ? `${englishPrefix} ${cleanEnglishName}`.trim().slice(0, 150)
         : undefined;
 
-    const cleanedMembers =
+    const cleanedMembers: TeamMember[] | undefined =
       selectedComp.id === 'cover-dance'
         ? teamMembersList
-            .map((m) => ({
-              name: m.name.trim().slice(0, 120),
-              gradeClass: m.gradeClass.trim().slice(0, 30),
-            }))
-            .filter((m) => m.name.length > 0)
+            .map((m) => {
+              const cleanMemberName = stripLeadingPrefix(m.name, ALL_PREFIX_VALUES);
+              if (cleanMemberName.length === 0) return null;
+              const isEnglishPrefix = ENGLISH_PREFIX_OPTIONS.some(
+                (opt) => opt.value === m.prefix
+              );
+              const formattedName = m.prefix
+                ? isEnglishPrefix
+                  ? `${m.prefix} ${cleanMemberName}`
+                  : `${m.prefix}${cleanMemberName}`
+                : cleanMemberName;
+              return {
+                name: formattedName.trim().slice(0, 120),
+                gradeClass: m.gradeClass.trim().slice(0, 30),
+              };
+            })
+            .filter((m): m is TeamMember => m !== null)
             .slice(0, MAX_COVER_DANCE_MEMBERS)
         : undefined;
 
@@ -306,7 +341,7 @@ export const RegistrationSection: React.FC<RegistrationSectionProps> = ({
       setClassroom('');
       setContactInfo('');
       setTeamName('');
-      setTeamMembersList([{ name: '', gradeClass: '' }]);
+      setTeamMembersList([{ prefix: '', name: '', gradeClass: '' }]);
       setSubmissionTitle('');
       setSubmissionUrl('');
       setErrors({});
@@ -717,10 +752,49 @@ export const RegistrationSection: React.FC<RegistrationSectionProps> = ({
 
                       <div className="space-y-2.5">
                         {teamMembersList.map((member, index) => (
-                          <div key={index} className="flex items-center gap-2">
-                            <span className="w-6 shrink-0 font-mono text-xs text-neutral-400 tabular-nums">
-                              {index + 1}.
-                            </span>
+                          <div
+                            key={index}
+                            className="flex flex-col gap-2 rounded-lg border border-white/10 bg-[#0B0D0F]/50 p-2.5 sm:flex-row sm:items-center sm:border-0 sm:bg-transparent sm:p-0"
+                          >
+                            <div className="flex items-center gap-2 sm:contents">
+                              <span className="w-6 shrink-0 font-mono text-xs text-neutral-400 tabular-nums">
+                                {index + 1}.
+                              </span>
+                              <select
+                                value={member.prefix}
+                                onChange={(e) =>
+                                  handleUpdateMemberRow(index, 'prefix', e.target.value)
+                                }
+                                aria-label={`คำนำหน้าชื่อ สมาชิกคนที่ ${index + 1}`}
+                                className="flex-1 rounded-lg border border-white/15 bg-[#0B0D0F] px-2.5 py-2 text-sm text-white focus:border-[#E10600] focus:outline-none sm:w-32 sm:flex-none sm:shrink-0"
+                              >
+                                <option value="">คำนำหน้า</option>
+                                <optgroup label="ภาษาไทย">
+                                  {THAI_PREFIX_OPTIONS.map((opt) => (
+                                    <option key={opt.value} value={opt.value}>
+                                      {opt.label}
+                                    </option>
+                                  ))}
+                                </optgroup>
+                                <optgroup label="English">
+                                  {ENGLISH_PREFIX_OPTIONS.map((opt) => (
+                                    <option key={opt.value} value={opt.value}>
+                                      {opt.label}
+                                    </option>
+                                  ))}
+                                </optgroup>
+                              </select>
+                              {teamMembersList.length > 1 && (
+                                <button
+                                  type="button"
+                                  onClick={() => handleRemoveMemberRow(index)}
+                                  aria-label={`ลบสมาชิกคนที่ ${index + 1}`}
+                                  className="shrink-0 rounded-lg border border-white/15 p-2 text-neutral-400 transition-colors hover:border-[#F87171]/50 hover:text-[#F87171] sm:order-last cursor-pointer"
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </button>
+                              )}
+                            </div>
                             <input
                               type="text"
                               maxLength={120}
@@ -728,7 +802,7 @@ export const RegistrationSection: React.FC<RegistrationSectionProps> = ({
                               onChange={(e) =>
                                 handleUpdateMemberRow(index, 'name', e.target.value)
                               }
-                              placeholder={`ชื่อ-นามสกุล สมาชิกคนที่ ${index + 1}`}
+                              placeholder={`ชื่อ-นามสกุล สมาชิกคนที่ ${index + 1} (ไม่ต้องใส่คำนำหน้า)`}
                               aria-label={`ชื่อ-นามสกุล สมาชิกคนที่ ${index + 1}`}
                               className="min-w-0 flex-1 rounded-lg border border-white/15 bg-[#0B0D0F] px-3.5 py-2 text-sm text-white placeholder:text-neutral-500 focus:border-[#E10600] focus:outline-none"
                             />
@@ -741,18 +815,8 @@ export const RegistrationSection: React.FC<RegistrationSectionProps> = ({
                               }
                               placeholder="ชั้น/ห้อง (เช่น ม.3/1)"
                               aria-label={`ชั้น/ห้อง สมาชิกคนที่ ${index + 1}`}
-                              className="w-36 shrink-0 rounded-lg border border-white/15 bg-[#0B0D0F] px-3 py-2 text-sm text-white placeholder:text-neutral-500 focus:border-[#E10600] focus:outline-none sm:w-44"
+                              className="w-full shrink-0 rounded-lg border border-white/15 bg-[#0B0D0F] px-3 py-2 text-sm text-white placeholder:text-neutral-500 focus:border-[#E10600] focus:outline-none sm:w-36"
                             />
-                            {teamMembersList.length > 1 && (
-                              <button
-                                type="button"
-                                onClick={() => handleRemoveMemberRow(index)}
-                                aria-label={`ลบสมาชิกคนที่ ${index + 1}`}
-                                className="shrink-0 rounded-lg border border-white/15 p-2 text-neutral-400 transition-colors hover:border-[#F87171]/50 hover:text-[#F87171] cursor-pointer"
-                              >
-                                <Trash2 className="h-4 w-4" />
-                              </button>
-                            )}
                           </div>
                         ))}
                       </div>
@@ -788,7 +852,7 @@ export const RegistrationSection: React.FC<RegistrationSectionProps> = ({
                         {selectedComp.id === 'speech' &&
                           'ชื่อเรื่อง / แนวทางสุนทรพจน์ (ความยาว 3:00–3:30 นาที)'}
                         {selectedComp.id === 'christmas-card' &&
-                          'แนวคิด / ข้อความอวยพร (การ์ดขนาด A5 · ส่งห้อง 421 หรือ 412)'}
+                          'แนวคิด / ข้อความอวยพร (การ์ดขนาด A5 · ส่งห้อง 412)'}
                         {selectedComp.id === 'drawing-painting' &&
                           'ชื่อผลงาน (หัวข้อ: ของขวัญจากหัวใจในค่ำคืนวันคริสต์มาส)'}
                         {selectedComp.id === 'english-quiz' && 'หมายเหตุเพิ่มเติม (ถ้ามี)'}

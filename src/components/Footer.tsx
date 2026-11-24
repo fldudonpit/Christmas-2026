@@ -25,7 +25,7 @@ export const Footer: React.FC<FooterProps> = ({ isAdmin, onOpenAdmin }) => {
 
           <div className="space-y-2 text-xs text-neutral-400 md:col-span-4">
             <p className="font-semibold text-white">จุดส่งผลงานและสถานที่แข่งขัน</p>
-            <p>Christmas Card: ม.ต้น ห้อง 421 (Teacher Wan) · ม.ปลาย ห้อง 412 (Teacher Araya)</p>
+            <p>Christmas Card: ม.ต้น ห้อง 412 (Teacher Chalita) · ม.ปลาย ห้อง 412 (Teacher Araya)</p>
             <p>Drawing &amp; Painting: ส่งผลงานที่ห้อง 421</p>
             <p>Speech: ม.ต้น ห้อง 425 · ม.ปลาย ห้อง 426 · ห้องเตรียมตัว 427 (8 ธ.ค. 2569)</p>
             <p>English Quiz: ม.ต้น ห้อง 425 · ม.ปลาย ห้อง 426 (15 ธ.ค. 2569)</p>

@@ -75,7 +75,7 @@ export const COMPETITIONS: Competition[] = [
     divisionMode: 'split',
     divisionLabel: 'แยก ม.ต้น (M.1–M.3) / ม.ปลาย (M.4–M.6)',
     channel: 'onsite_artwork',
-    venueOrType: 'ส่งผลงานที่ห้อง 421 (ม.ต้น) / ห้อง 412 (ม.ปลาย)',
+    venueOrType: 'ส่งผลงานที่ห้อง 412 (ม.ต้น Teacher Chalita / ม.ปลาย Teacher Araya)',
     dateLabel: 'ภายใน 8 ธ.ค. 2569',
     submissionDeadline: 'December 8, 2026 (8 ธันวาคม 2569)',
     themeTopic: 'Christmas',
@@ -99,8 +99,8 @@ export const COMPETITIONS: Competition[] = [
     contacts: [
       {
         level: 'ม.ต้น (Lower Secondary · M.1–M.3)',
-        room: 'Room 421 (ห้อง 421)',
-        teacher: 'Teacher Wan',
+        room: 'Room 412 (ห้อง 412)',
+        teacher: 'Teacher Chalita',
         lineOpenChat:
           'https://line.me/ti/g2/9v4L346mnBt-2tlYEVMnPW49wpgOsbsd0gyr5w?utm_source=invitation&utm_medium=link_copy&utm_campaign=default',
       },

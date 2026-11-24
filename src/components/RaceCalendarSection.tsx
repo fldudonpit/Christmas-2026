@@ -36,7 +36,7 @@ export const RaceCalendarSection: React.FC<RaceCalendarSectionProps> = ({
       case 'singing-contest':
         return 'เดี่ยว · ส่งคลิปทางอีเมล';
       case 'christmas-card':
-        return 'เดี่ยว · ส่งการ์ดขนาด A5';
+        return 'เดี่ยว · ส่งการ์ดขนาด A5 ที่ห้อง 412';
       case 'speech':
         return 'เดี่ยว · แข่งสด 3:00–3:30 นาที';
       case 'drawing-painting':
@@ -93,7 +93,7 @@ export const RaceCalendarSection: React.FC<RaceCalendarSectionProps> = ({
                 <div className="space-y-1.5">
                   <p className="font-semibold text-white">8 ธ.ค. · ส่งผลงาน / แข่ง Speech</p>
                   <p className="text-neutral-300 leading-relaxed">
-                    Singing (อีเมล) · Card (421/412) · Drawing (421) · Cover Dance (ลิงก์ 23:59 น.) ·
+                    Singing (อีเมล) · Card (412) · Drawing (421) · Cover Dance (ลิงก์ 23:59 น.) ·
                     Speech (ห้อง 425/426 · เตรียม 427)
                   </p>
                 </div>
