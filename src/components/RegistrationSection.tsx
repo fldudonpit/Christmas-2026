@@ -41,10 +41,7 @@ const ENGLISH_PREFIX_OPTIONS = [
   { value: 'Ms.', label: 'Ms.' },
 ] as const;
 
-const ALL_PREFIX_VALUES = [
-  ...THAI_PREFIX_OPTIONS.map((p) => p.value),
-  ...ENGLISH_PREFIX_OPTIONS.map((p) => p.value),
-];
+const ENGLISH_PREFIX_VALUES = ENGLISH_PREFIX_OPTIONS.map((p) => p.value);
 
 interface TeamMemberFormRow {
   prefix: string;
@@ -232,16 +229,23 @@ export const RegistrationSection: React.FC<RegistrationSectionProps> = ({
         (m) => m.prefix.trim().length > 0 || m.name.trim().length > 0 || m.gradeClass.trim().length > 0
       );
       if (activeMembers.length === 0) {
-        nextErrors.teamMembers = 'กรุณากรอกข้อมูลสมาชิกในทีมอย่างน้อย 1 คน';
+        nextErrors.teamMembers = 'กรุณากรอกข้อมูลสมาชิกในทีมอย่างน้อย 1 คน (ภาษาอังกฤษเท่านั้น)';
       } else {
         const missingPrefix = activeMembers.some((m) => !m.prefix);
-        const invalidName = activeMembers.some(
-          (m) => stripLeadingPrefix(m.name, ALL_PREFIX_VALUES).length < 2
-        );
+        const invalidName = activeMembers.some((m) => {
+          const cleanName = stripLeadingPrefix(m.name, ENGLISH_PREFIX_VALUES);
+          return cleanName.length < 2;
+        });
+        const nonEnglishName = activeMembers.some((m) => {
+          const cleanName = stripLeadingPrefix(m.name, ENGLISH_PREFIX_VALUES);
+          return !/^[A-Za-z\s.'-]+$/.test(cleanName) || !/[A-Za-z].*[A-Za-z]/.test(cleanName);
+        });
         if (missingPrefix) {
-          nextErrors.teamMembers = 'กรุณาเลือกคำนำหน้าชื่อสมาชิกในทีมให้ครบทุกคน';
+          nextErrors.teamMembers = 'กรุณาเลือกคำนำหน้าชื่อภาษาอังกฤษให้ครบทุกคน';
         } else if (invalidName) {
-          nextErrors.teamMembers = 'กรุณากรอกชื่อ-นามสกุลสมาชิกในทีมให้ครบทุกคน (อย่างน้อย 2 ตัวอักษร)';
+          nextErrors.teamMembers = 'กรุณากรอกชื่อ-นามสกุลภาษาอังกฤษสมาชิกในทีมให้ครบทุกคน (อย่างน้อย 2 ตัวอักษร)';
+        } else if (nonEnglishName) {
+          nextErrors.teamMembers = 'รายชื่อสมาชิกที่เหลือกรุณากรอกเป็นภาษาอังกฤษเท่านั้น (เช่น Phitchaya Udonpit)';
         }
       }
     }
@@ -284,16 +288,9 @@ export const RegistrationSection: React.FC<RegistrationSectionProps> = ({
       selectedComp.id === 'cover-dance'
         ? teamMembersList
             .map((m) => {
-              const cleanMemberName = stripLeadingPrefix(m.name, ALL_PREFIX_VALUES);
+              const cleanMemberName = stripLeadingPrefix(m.name, ENGLISH_PREFIX_VALUES);
               if (cleanMemberName.length === 0) return null;
-              const isEnglishPrefix = ENGLISH_PREFIX_OPTIONS.some(
-                (opt) => opt.value === m.prefix
-              );
-              const formattedName = m.prefix
-                ? isEnglishPrefix
-                  ? `${m.prefix} ${cleanMemberName}`
-                  : `${m.prefix}${cleanMemberName}`
-                : cleanMemberName;
+              const formattedName = m.prefix ? `${m.prefix} ${cleanMemberName}` : cleanMemberName;
               return {
                 name: formattedName.trim().slice(0, 120),
                 gradeClass: m.gradeClass.trim().slice(0, 30),
@@ -742,7 +739,7 @@ export const RegistrationSection: React.FC<RegistrationSectionProps> = ({
                     <div className="space-y-3">
                       <div className="flex items-center justify-between gap-2">
                         <span className="text-xs font-medium text-neutral-300">
-                          รายชื่อสมาชิกในทีม (สูงสุด 10 คน · ชุดเดียวกับวันแข่งจริง){' '}
+                          รายชื่อสมาชิกในทีมที่เหลือ — ภาษาอังกฤษเท่านั้น (สูงสุด 10 คน · ชุดเดียวกับวันแข่งจริง){' '}
                           <span className="text-[#E10600]">*</span>
                         </span>
                         <span className="font-mono text-xs text-neutral-400 tabular-nums">
@@ -765,24 +762,15 @@ export const RegistrationSection: React.FC<RegistrationSectionProps> = ({
                                 onChange={(e) =>
                                   handleUpdateMemberRow(index, 'prefix', e.target.value)
                                 }
-                                aria-label={`คำนำหน้าชื่อ สมาชิกคนที่ ${index + 1}`}
+                                aria-label={`คำนำหน้าชื่อภาษาอังกฤษ สมาชิกคนที่ ${index + 1}`}
                                 className="flex-1 rounded-lg border border-white/15 bg-[#0B0D0F] px-2.5 py-2 text-sm text-white focus:border-[#E10600] focus:outline-none sm:w-32 sm:flex-none sm:shrink-0"
                               >
-                                <option value="">คำนำหน้า</option>
-                                <optgroup label="ภาษาไทย">
-                                  {THAI_PREFIX_OPTIONS.map((opt) => (
-                                    <option key={opt.value} value={opt.value}>
-                                      {opt.label}
-                                    </option>
-                                  ))}
-                                </optgroup>
-                                <optgroup label="English">
-                                  {ENGLISH_PREFIX_OPTIONS.map((opt) => (
-                                    <option key={opt.value} value={opt.value}>
-                                      {opt.label}
-                                    </option>
-                                  ))}
-                                </optgroup>
+                                <option value="">Select Title</option>
+                                {ENGLISH_PREFIX_OPTIONS.map((opt) => (
+                                  <option key={opt.value} value={opt.value}>
+                                    {opt.label}
+                                  </option>
+                                ))}
                               </select>
                               {teamMembersList.length > 1 && (
                                 <button
@@ -802,8 +790,8 @@ export const RegistrationSection: React.FC<RegistrationSectionProps> = ({
                               onChange={(e) =>
                                 handleUpdateMemberRow(index, 'name', e.target.value)
                               }
-                              placeholder={`ชื่อ-นามสกุล สมาชิกคนที่ ${index + 1} (ไม่ต้องใส่คำนำหน้า)`}
-                              aria-label={`ชื่อ-นามสกุล สมาชิกคนที่ ${index + 1}`}
+                              placeholder={`ชื่อ-นามสกุลภาษาอังกฤษ สมาชิกคนที่ ${index + 1} (เช่น Phitchaya Udonpit)`}
+                              aria-label={`ชื่อ-นามสกุลภาษาอังกฤษ สมาชิกคนที่ ${index + 1}`}
                               className="min-w-0 flex-1 rounded-lg border border-white/15 bg-[#0B0D0F] px-3.5 py-2 text-sm text-white placeholder:text-neutral-500 focus:border-[#E10600] focus:outline-none"
                             />
                             <input
@@ -906,7 +894,7 @@ export const RegistrationSection: React.FC<RegistrationSectionProps> = ({
                   {selectedComp.id === 'drawing-painting' && (
                     <div className="rounded-lg border border-white/10 bg-[#0B0D0F] px-4 py-3 text-xs text-neutral-300">
                       ข้อบังคับหลังภาพวาด: กรุณาเขียน 1) ชื่อ-สกุลภาษาไทย 2) ชื่อ-สกุลภาษาอังกฤษ 3)
-                      ระดับชั้น 4) ห้องเรียน 5) เบอร์โทรศัพท์ติดต่อ ให้ชัดเจนด้านหลังผลงานก่อนส่งที่ห้อง 421
+                      ระดับชั้น 4) ห้องเรียน 5) เบอร์โทรศัพท์ติดต่อ ให้ชัดเจนด้านหลังผลงานก่อนส่งที่ห้อง 421 (ครูชวนันท์)
                     </div>
                   )}
                 </div>

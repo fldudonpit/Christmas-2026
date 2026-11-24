@@ -197,19 +197,19 @@ export const COMPETITIONS: Competition[] = [
     divisionMode: 'open',
     divisionLabel: 'รวมทุกระดับชั้น (Combined Levels · ไม่แยก ม.ต้น/ม.ปลาย)',
     channel: 'onsite_artwork',
-    venueOrType: 'ส่งผลงานที่ห้อง 421',
+    venueOrType: 'ส่งผลงานที่ห้อง 421 (ครูชวนันท์)',
     dateLabel: 'ภายใน 8 ธ.ค. 2569',
     submissionDeadline: 'December 8, 2026 (8 ธันวาคม 2569)',
     themeTopic: 'A Gift from the Heart on Christmas Night (ของขวัญจากหัวใจในค่ำคืนวันคริสต์มาส)',
     teamFormat: 'ประเภทเดี่ยว · รวมทุกระดับชั้น (Combined Levels)',
     summary:
-      'ประกวดวาดภาพระบายสีในหัวข้อ "ของขวัญจากหัวใจในค่ำคืนวันคริสต์มาส" แข่งขันรวมทุกระดับชั้นไม่แยก ม.ต้น-ม.ปลาย ส่งผลงานที่ห้อง 421',
+      'ประกวดวาดภาพระบายสีในหัวข้อ "ของขวัญจากหัวใจในค่ำคืนวันคริสต์มาส" แข่งขันรวมทุกระดับชั้นไม่แยก ม.ต้น-ม.ปลาย ส่งผลงานที่ห้อง 421 (ครูชวนันท์)',
     rules: [
       'เข้าแข่งขันแบบเดี่ยว (Individual) และแข่งขันรวมทุกระดับชั้น ไม่แยก ม.ต้น / ม.ปลาย',
       'สร้างสรรค์ผลงานภายใต้หัวข้อ "A Gift from the Heart on Christmas Night (ของขวัญจากหัวใจในค่ำคืนวันคริสต์มาส)"',
       'แสดงความคิดสร้างสรรค์ จินตนาการ ทักษะทางศิลปะ และการสื่อความหมาย',
       'เขียนข้อมูลด้านหลังภาพวาดให้ชัดเจนครบทั้ง 5 รายการ: ชื่อ-สกุลภาษาไทย, ชื่อ-สกุลภาษาอังกฤษ, ระดับชั้น, ห้องเรียน และเบอร์โทรศัพท์ติดต่อ',
-      'ส่งผลงานที่ห้อง 421 ภายในวันที่ 8 ธันวาคม 2569',
+      'ส่งผลงานที่ห้อง 421 (ครูชวนันท์) ภายในวันที่ 8 ธันวาคม 2569',
     ],
     judgingCriteria: [
       {
@@ -243,6 +243,7 @@ export const COMPETITIONS: Competition[] = [
       {
         level: 'รวมทุกระดับชั้น (Combined Levels · M.1–M.6)',
         room: 'Room 421 (ห้อง 421)',
+        teacher: 'ครูชวนันท์',
         lineOpenChat:
           'https://line.me/ti/g2/VDT7tYu9XeFIVmUdzqFKgZJxJeQRDg8IAp0pNA?utm_source=invitation&utm_medium=link_copy&utm_campaign=default',
       },

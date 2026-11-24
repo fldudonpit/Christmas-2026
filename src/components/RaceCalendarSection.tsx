@@ -40,7 +40,7 @@ export const RaceCalendarSection: React.FC<RaceCalendarSectionProps> = ({
       case 'speech':
         return 'เดี่ยว · แข่งสด 3:00–3:30 นาที';
       case 'drawing-painting':
-        return 'เดี่ยว · ส่งภาพวาดที่ห้อง 421';
+        return 'เดี่ยว · ส่งภาพวาดที่ห้อง 421 (ครูชวนันท์)';
       case 'english-quiz':
         return 'เดี่ยว · แข่งสด 2 รอบ (30 ข้อ + รอบชิง)';
       case 'cover-dance':
