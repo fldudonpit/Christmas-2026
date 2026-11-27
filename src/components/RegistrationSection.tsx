@@ -842,7 +842,7 @@ export const RegistrationSection: React.FC<RegistrationSectionProps> = ({
                         {selectedComp.id === 'christmas-card' &&
                           'แนวคิด / ข้อความอวยพร (การ์ดขนาด A5 · ส่งห้อง 412)'}
                         {selectedComp.id === 'drawing-painting' &&
-                          'ชื่อผลงาน (หัวข้อ: ของขวัญจากหัวใจในค่ำคืนวันคริสต์มาส)'}
+                          'ชื่อผลงาน (กระดาษปอนด์ขนาด A3 · หัวข้อ: ของขวัญจากหัวใจในค่ำคืนวันคริสต์มาส)'}
                         {selectedComp.id === 'english-quiz' && 'หมายเหตุเพิ่มเติม (ถ้ามี)'}
                       </label>
                       <input
@@ -893,7 +893,7 @@ export const RegistrationSection: React.FC<RegistrationSectionProps> = ({
 
                   {selectedComp.id === 'drawing-painting' && (
                     <div className="rounded-lg border border-white/10 bg-[#0B0D0F] px-4 py-3 text-xs text-neutral-300">
-                      ข้อบังคับหลังภาพวาด: กรุณาเขียน 1) ชื่อ-สกุลภาษาไทย 2) ชื่อ-สกุลภาษาอังกฤษ 3)
+                      ข้อบังคับผลงาน: ใช้กระดาษปอนด์ขนาด A3 และกรุณาเขียน 1) ชื่อ-สกุลภาษาไทย 2) ชื่อ-สกุลภาษาอังกฤษ 3)
                       ระดับชั้น 4) ห้องเรียน 5) เบอร์โทรศัพท์ติดต่อ ให้ชัดเจนด้านหลังผลงานก่อนส่งที่ห้อง 421 (ครูชวนันท์)
                     </div>
                   )}
