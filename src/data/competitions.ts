@@ -178,11 +178,15 @@ export const COMPETITIONS: Competition[] = [
         level: 'ม.ต้น (Lower Secondary · M.1–M.3)',
         room: 'Room 425 (ห้อง 425)',
         note: 'ห้องเตรียมตัว (Preparation Room): Room 427',
+        lineOpenChat:
+          'https://line.me/ti/g2/JUMafCdJev1h_OZisLwFjN4PDjwQNySvS6L6-g?utm_source=invitation&utm_medium=link_copy&utm_campaign=default',
       },
       {
         level: 'ม.ปลาย (Upper Secondary · M.4–M.6)',
         room: 'Room 426 (ห้อง 426)',
         note: 'ห้องเตรียมตัว (Preparation Room): Room 427',
+        lineOpenChat:
+          'https://line.me/ti/g2/e-Fqq1rK5E5CEf93SbjeJwnQnPzRmyXyxbd2_Q?utm_source=invitation&utm_medium=link_copy&utm_campaign=default',
       },
     ],
     dateGroup: 'dec8_live',
@@ -301,10 +305,14 @@ export const COMPETITIONS: Competition[] = [
       {
         level: 'ม.ต้น (Lower Secondary · M.1–M.3)',
         room: 'Room 425 (ห้อง 425)',
+        lineOpenChat:
+          'https://line.me/ti/g2/ErqYEDsrWqFemJVxDXBfq3Twjn-Phe6q7eOffQ?utm_source=invitation&utm_medium=QR_code&utm_campaign=default',
       },
       {
         level: 'ม.ปลาย (Upper Secondary · M.4–M.6)',
         room: 'Room 426 (ห้อง 426)',
+        lineOpenChat:
+          'https://line.me/ti/g2/AbjOVt_pZLNSGPXohZZKOEVcHNqmj475g5mZaQ?utm_source=invitation&utm_medium=link_copy&utm_campaign=default',
       },
     ],
     dateGroup: 'dec15_live',
